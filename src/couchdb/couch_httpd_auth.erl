@@ -16,6 +16,7 @@
 -export([default_authentication_handler/1,special_test_authentication_handler/1]).
 -export([cookie_authentication_handler/1]).
 -export([null_authentication_handler/1]).
+-export([proxy_authentification_handler/1]).
 -export([cookie_auth_header/2]).
 -export([handle_session_req/1]).
 -export([handle_user_req/1]).
@@ -85,7 +86,38 @@ default_authentication_handler(Req) ->
 
 null_authentication_handler(Req) ->
     Req#httpd{user_ctx=#user_ctx{roles=[<<"_admin">>]}}.
-
+    
+    
+proxy_authentification_handler(Req) ->
+    case proxy_auth_user(Req) of
+        nil -> default_authentication_handler(Req);
+        Req2 -> Req2
+    end.
+    
+proxy_auth_user(Req) ->
+    XHeaderUserName = couch_config:get("couch_httpd_auth", "x_auth_username", "X-Auth-CouchDB-UserName"),
+    XHeaderRoles = couch_config:get("couch_httpd_auth", "x_auth_roles", "X-Auth-CouchDB-Roles"),
+    XHeaderToken = couch_config:get("couch_httpd_auth", "x_auth_token", "X-Auth-CouchDB-Token"),
+    case header_value(Req, XHeaderUserName) of
+        undefined -> nil;
+        UserName ->
+            Roles = case header_value(Req, XHeaderRoles) of
+                undefined -> [];
+                Else ->  string:tokens(Else, ",")
+            end,
+            case couch_config:get("couch_httpd_auth", "secret", nil) of
+                nil -> Req#httpd{user_ctx=#user_ctx{name=UserName, roles=Roles}};
+                Secret ->
+                    ExpectedToken = couch_util:to_hex(crypto:sha_mac(Secret, UserName)),
+                    case header_value(Req, XHeaderToken) of
+                        Token when Token == ExpectedToken ->
+                            ?LOG_DEBUG("username ~p authenticated via proxy ~n", [UserName]),
+                            Req#httpd{user_ctx=#user_ctx{name=UserName, roles=Roles}};
+                        _ -> nil
+                    end
+            end           
+    end.
+    
 % Cookie auth handler using per-node user db
 cookie_authentication_handler(Req) ->
     case cookie_auth_user(Req) of
