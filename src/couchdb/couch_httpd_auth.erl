@@ -103,7 +103,8 @@ proxy_auth_user(Req) ->
         UserName ->
             Roles = case header_value(Req, XHeaderRoles) of
                 undefined -> [];
-                Else ->  string:tokens(Else, ",")
+                Else ->  
+                    [?l2b(R) || R <- string:tokens(Else, ",")]
             end,
             case couch_config:get("couch_httpd_auth", "secret", nil) of
                 nil -> Req#httpd{user_ctx=#user_ctx{name=UserName, roles=Roles}};
@@ -111,8 +112,8 @@ proxy_auth_user(Req) ->
                     ExpectedToken = couch_util:to_hex(crypto:sha_mac(Secret, UserName)),
                     case header_value(Req, XHeaderToken) of
                         Token when Token == ExpectedToken ->
-                            ?LOG_DEBUG("username ~p authenticated via proxy ~n", [UserName]),
-                            Req#httpd{user_ctx=#user_ctx{name=UserName, roles=Roles}};
+                            ?LOG_DEBUG("username ~p with roles ~p authenticated via proxy ~n", [UserName, Roles]),
+                            Req#httpd{user_ctx=#user_ctx{name=?l2b(UserName),roles=Roles}};
                         _ -> nil
                     end
             end           

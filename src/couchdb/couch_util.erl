@@ -93,7 +93,7 @@ get_nested_json_value(Value, []) ->
 get_nested_json_value(_NotJSONObj, _) ->
     throw({not_found, json_mismatch}).
 
-json_user_ctx(#db{name=DbName, user_ctx=Ctx}) ->
+json_user_ctx(#db{name=DbName, user_ctx=Ctx}) ->   
     {[{<<"db">>, DbName},
             {<<"name">>,Ctx#user_ctx.name},
             {<<"roles">>,Ctx#user_ctx.roles}]}.
