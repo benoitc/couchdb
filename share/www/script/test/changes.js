@@ -236,7 +236,7 @@ couchTests.changes = function(debug) {
       T(db.save({"user" : "Noah Slater"}).ok);
       var req = CouchDB.request("GET", "/test_suite_db/_changes?filter=changes_filter/userCtx", authOpts);
       var resp = JSON.parse(req.responseText);
-      T(resp.results.length == 0);
+      TEquals(0, resp.results.length, "result length should be 0");
 
       var docResp = db.save({"user" : "Chris Anderson"});
       T(docResp.ok);

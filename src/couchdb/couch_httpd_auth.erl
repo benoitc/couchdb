@@ -37,7 +37,7 @@ special_test_authentication_handler(Req) ->
         {_, _} ->
             throw({unauthorized, <<"Name or password is incorrect.">>})
         end,
-        Req#httpd{user_ctx=#user_ctx{name=?l2b(Name)}};
+        Req#httpd{user_ctx=#user_ctx{name=?l2b(Name),roles=[<<"_admin">>]}};
     _ ->
         % No X-Couch-Test-Auth credentials sent, give admin access so the
         % previous authentication can be restored after the test
