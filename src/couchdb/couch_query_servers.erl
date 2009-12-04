@@ -183,7 +183,14 @@ validate_doc_update(Lang, FunSrc, EditDoc, DiskDoc, Ctx) ->
 rewrite_path(Lang, FunSrc, Req, Db) ->
     Proc = get_os_process(Lang),
     JsonReq = couch_httpd_external:json_req_obj(Req, Db),
-    try proc_prompt(Proc, [<<"rewrite">>, FunSrc, JsonReq])
+    try proc_prompt(Proc, [<<"rewrite">>, FunSrc, JsonReq]) of
+        {[{<<"forbidden">>,Message}]} ->
+            throw({forbidden, Message});
+        {[{<<"unauthorized">>, Message}]} ->
+            throw({unauthorized, Message});
+        {[{<<"not_found">>, Message}]} ->
+            throw({not_found, Message});
+        NewPath -> NewPath
     after
         ok = ret_os_process(Proc)
     end.

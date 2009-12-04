@@ -20,11 +20,10 @@ var Rewrite = {
         respond(result);
       } else {
         var path = "/" + req.path.join("/");
-        log(toJSON(path));
         respond (path);
       }
     } catch (error) {
-      respondError(e, funSrc, true);
+       respond(error);
     }
   }
 };
