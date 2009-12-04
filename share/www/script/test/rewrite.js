@@ -63,8 +63,16 @@ couchTests.rewrite = function(debug) {
             var matches = path.match(/^\/hello\/(\w.+)$/);
             
             if (matches[1]) {
+              if (req.verb == "DELETE") {
+                throw {forbidden:
+                    "delete is forbidden"};
+              }
+              
               return "_update/hello/" + matches[1];
             }
+            
+            
+            
 
           }).toString() + ")",
           updates: {
@@ -130,6 +138,15 @@ couchTests.rewrite = function(debug) {
 
         doc = db.open(docid);
         T(doc.world == "hello");
+        
+        
+        try {
+          req = CouchDB.request("DELETE", "/test_suite_db/_rewrite/test/hello/"+docid);
+          T(req.status == 403);
+        } catch (e) {
+          T(e.error == "forbidden");
+          T(req.status == 403);
+        }
   });
   
 }
