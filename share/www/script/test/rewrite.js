@@ -86,13 +86,18 @@ couchTests.rewrite = function(debug) {
 
         db.save(designDoc);
 
+        // test simple rewriting
+
         req = CouchDB.request("GET", "/test_suite_db/_rewrite/test/foo");
         T(req.responseText == "This is a base64 encoded text");
         T(req.getResponseHeader("Content-Type") == "text/plain");
-
+        
+        // test error 404
+        
         req = CouchDB.request("GET", "/test_suite_db/_rewrite/test/notfound");
         T(req.status == 404);
 
+        // test error 403
         try {
           req = CouchDB.request("GET", "/test_suite_db/_rewrite/test/forbidden");
           T(req.status == 403);
@@ -101,6 +106,7 @@ couchTests.rewrite = function(debug) {
           T(req.status == 403);
         }
 
+        // test error 401
         try {
           req = CouchDB.request("GET", "/test_suite_db/_rewrite/test/unauthorized");
           T(req.status == 401);
@@ -109,14 +115,14 @@ couchTests.rewrite = function(debug) {
           T(e.error == "unauthorized");
         }
         
+        // test POST 
+        // hello update world
         
         var doc = {"word":"plankton", "name":"Rusty"}
         var resp = db.save(doc);
         T(resp.ok);
         var docid = resp.id;
-
-        // test POST 
-        // hello update world
+        
         xhr = CouchDB.request("PUT", "/test_suite_db/_rewrite/test/hello/"+docid);
         T(xhr.status == 201);
         T(xhr.responseText == "hello doc");
