@@ -16,7 +16,6 @@ var Rewrite = {
     try {
       var result = rewriteFun.apply(null, [req]);
       if (result) {
-        
         respond(result);
       } else {
         var path = "/" + req.path.join("/");

@@ -68,6 +68,7 @@ loadTest("reduce_builtin.js");
 loadTest("reduce_false.js");
 loadTest("replication.js");
 loadTest("rev_stemming.js");
+loadTest("rewrite.js");
 loadTest("security_validation.js");
 loadTest("show_documents.js");
 loadTest("stats.js");
