@@ -43,7 +43,8 @@ var dispatch = {
   "show"     : Render.show,
   "update"   : Render.update,
   "list"     : Render.list,
-  "filter"   : Filter.filter
+  "filter"   : Filter.filter,
+  "rewrite"  : Rewrite.rewrite
 };
 
 while (line = eval(readline())) {

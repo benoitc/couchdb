@@ -72,6 +72,7 @@ _session = {couch_httpd_auth, handle_session_req}
 _oauth = {couch_httpd_oauth, handle_oauth_req}
 _user = {couch_httpd_auth, handle_user_req}
 
+
 [httpd_db_handlers]
 _view_cleanup = {couch_httpd_db, handle_view_cleanup_req}
 _compact = {couch_httpd_db, handle_compact_req}
@@ -79,6 +80,7 @@ _design = {couch_httpd_db, handle_design_req}
 _view = {couch_httpd_view, handle_db_view_req}
 _temp_view = {couch_httpd_view, handle_temp_view_req}
 _changes = {couch_httpd_db, handle_changes_req}
+_rewrite = {couch_httpd_rewrite, handle_rewrite_req}
 
 ; The external module takes an optional argument allowing you to narrow it to a
 ; single script. Otherwise the script name is inferred from the first path section
@@ -92,6 +94,7 @@ _show = {couch_httpd_show, handle_doc_show_req}
 _list = {couch_httpd_show, handle_view_list_req}
 _info = {couch_httpd_db,   handle_design_info_req}
 _update = {couch_httpd_show, handle_doc_update_req}
+_rewrite = {couch_httpd_rewrite, handle_rewrite_req}
 
 [uuids]
 ; Known algorithms:

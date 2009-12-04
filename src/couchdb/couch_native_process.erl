@@ -140,6 +140,9 @@ run(State, [<<"update">>, BFun, Doc, Req]) ->
             [<<"up">>, JsonDoc, JsonResp]
     end,
     {State, Resp};
+run(State, [<<"rewrite">>, BFun, Req]) ->
+    {_Sig, Fun} = makefun(State, BFun),
+    {State, catch Fun(Req)};
 run(State, [<<"list">>, Head, Req]) ->
     {Sig, Fun} = hd(State#evstate.funs),
     % This is kinda dirty
@@ -210,6 +213,8 @@ run(#evstate{list_pid=Pid}=State, [<<"list_end">>]) when is_pid(Pid) ->
     end,
     process_flag(trap_exit, erlang:get(do_trap)),
     {State#evstate{list_pid=nil}, Resp};
+    
+
 run(_, Unknown) ->
     ?LOG_ERROR("Native Process: Unknown command: ~p~n", [Unknown]),
     throw({error, query_server_error}).

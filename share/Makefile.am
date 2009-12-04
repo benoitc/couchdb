@@ -19,7 +19,8 @@ JS_FILE_COMPONENTS = \
     server/state.js \
     server/util.js \
     server/validate.js \
-    server/views.js
+    server/views.js \
+    server/rewrite.js
 
 JS_FILE_COMPONENTS_LAST = server/loop.js
 
