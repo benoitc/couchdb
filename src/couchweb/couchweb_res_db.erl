@@ -64,9 +64,6 @@ is_conflict(RD, Ctx) ->
             {false, RD, Ctx}
     end.
 
-
-
-
 resource_exists(RD, Ctx) ->
     DbName = wrq:path_info(dbname, RD),
     UserCtx =  #user_ctx{}, 
