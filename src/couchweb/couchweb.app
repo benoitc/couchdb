@@ -20,6 +20,7 @@
 		 couchweb_res_db,
          couchweb_res_info,
          couchweb_res_uuids,
+		 couchweb_res_static,
 	     couchweb_sup,
 		 json_pp
 	    ]},

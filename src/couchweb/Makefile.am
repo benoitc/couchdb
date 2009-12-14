@@ -26,6 +26,7 @@ source_files = \
 	couchweb_res_db.erl \
 	couchweb_res_info.erl \
 	couchweb_res_uuids.erl \
+	couchweb_res_static.erl \
 	couchweb_sup.erl \
 	json_pp
 
@@ -38,6 +39,7 @@ compiled_files = \
 	couchweb_res_db.beam \
 	couchweb_res_info.beam \
 	couchweb_res_uuids.beam \
+	couchweb_res_static.beam \
 	couchweb_sup.beam \
 	json_pp.beam
 
