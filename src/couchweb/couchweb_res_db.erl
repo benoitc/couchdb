@@ -47,11 +47,9 @@ allowed_methods(RD, Ctx) ->
     RD, Ctx}.
     
 is_authorized(RD, Ctx) ->
-    io:format("auth"),
     {true, RD, Ctx}.
      
 resource_exists(RD, Ctx) ->
-    io:format("exist"),
     DbName = wrq:path_info(dbname, RD),
     UserCtx =  #user_ctx{}, 
     case couch_db:open(?l2b(DbName),  [{user_ctx, UserCtx}]) of

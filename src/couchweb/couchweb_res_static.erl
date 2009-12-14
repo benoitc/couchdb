@@ -18,6 +18,8 @@
 	 resource_exists/2,
 	 last_modified/2,
 	 content_types_provided/2,
+	 moved_permanently/2,
+	 previously_existed/2,
 	 provide_content/2,
 	 generate_etag/2]).
 
@@ -34,10 +36,10 @@ init(ConfigProps) ->
     {root, Root} = proplists:lookup(root, ConfigProps),
     {ok, #ctx{root=Root}}.
     
-allowed_methods(ReqData, Context) ->
-    {['HEAD', 'GET'], ReqData, Context}.
+allowed_methods(RD, Ctx) ->
+    {['HEAD', 'GET'], RD, Ctx}.
 
-file_path(Context, Name) ->
+file_path(Ctx, Name) ->
    RelName = case Name of
         "" ->
             Name;
@@ -47,81 +49,95 @@ file_path(Context, Name) ->
                 _ -> Name
             end
         end,
-    filename:join([Context#ctx.root, RelName]).
+    filename:join([Ctx#ctx.root, RelName]).
 
-file_exists(Context, Name) ->
-    NamePath = file_path(Context, Name),
+file_exists(Ctx, Name) ->
+    NamePath = file_path(Ctx, Name),
     case filelib:is_regular(NamePath) of 
 	true ->
 	    {true, NamePath};
 	false ->
 	    false
     end.
+    
+    
+moved_permanently(RD, Ctx) ->
+    case wrq:path(RD) of 
+        "/_utils" ->
+            {{true, "/_utils/"}, RD, Ctx};
+        _ ->
+            {false, RD, Ctx}
+    end.
+    
 
-resource_exists(ReqData, Context) ->
-    Path = wrq:disp_path(ReqData),
-    case file_exists(Context, Path) of 
-	{true, _} ->
-	    {true, ReqData, Context};
-	_ ->
-        {false, ReqData, Context}
+previously_existed(RD, Ctx) -> {true, RD, Ctx}.
+
+resource_exists(RD, Ctx) ->
+    case wrq:path(RD) of
+        "/_utils" ->
+            {false, RD, Ctx};
+        _ ->
+            Path = wrq:disp_path(RD),
+            case file_exists(Ctx, Path) of 
+        	{true, _} ->
+        	    {true, RD, Ctx};
+        	_ ->
+                {false, RD, Ctx}
+            end
     end.
 
-maybe_fetch_object(Context, Path) ->
-    % if returns {true, NewContext} then NewContext has response_body
-    case Context#ctx.response_body of
+maybe_fetch_object(Ctx, Path) ->
+    % if returns {true, NewCtx} then NewCtx has response_body
+    case Ctx#ctx.response_body of
 	undefined ->
-	    case file_exists(Context, Path) of 
+	    case file_exists(Ctx, Path) of 
 		{true, FullPath} ->
 		    {ok, Value} = file:read_file(FullPath),
-		    {true, Context#ctx{response_body=Value}};
+		    {true, Ctx#ctx{response_body=Value}};
 		false ->
-		    {false, Context}
+		    {false, Ctx}
 	    end;
 	_Body ->
-	    {true, Context}
+	    {true, Ctx}
     end.
 
-content_types_provided(ReqData, #ctx{root=Root} = Ctx) ->
-    io:format("path ~p ~n",[ wrq:disp_path(ReqData)]),
-    
-    
-    Path = case wrq:disp_path(ReqData) of
+content_types_provided(RD, #ctx{root=Root} = Ctx) ->
+    Path = case wrq:disp_path(RD) of
         [] -> Root;
         P -> P
     end,
     
     CT = webmachine_util:guess_mime(Path),
-    {[{CT, provide_content}], ReqData,
+    {[{CT, provide_content}], RD,
      Ctx#ctx{metadata=[{'content-type', CT}|Ctx#ctx.metadata]}}.
 
 
-provide_content(ReqData, Ctx) ->
-    case maybe_fetch_object(Ctx, wrq:disp_path(ReqData)) of 
-	{true, NewContext} ->
-	    Body = NewContext#ctx.response_body,
-	    {Body, ReqData, Ctx};
-	{false, NewContext} ->
-	    {error, ReqData, NewContext}
+provide_content(RD, Ctx) ->
+    case maybe_fetch_object(Ctx, wrq:disp_path(RD)) of 
+	{true, NewCtx} ->
+	    Body = NewCtx#ctx.response_body,
+	    {Body, RD, Ctx};
+	{false, NewCtx} ->
+	    {error, RD, NewCtx}
     end.
 
-last_modified(ReqData, Context) ->
-    {true, FullPath} = file_exists(Context,
-                                   wrq:disp_path(ReqData)),
+last_modified(RD, Ctx) ->
+    {true, FullPath} = file_exists(Ctx,
+                                   wrq:disp_path(RD)),
     LMod = filelib:last_modified(FullPath),
-    {LMod, ReqData, Context#ctx{metadata=[{'last-modified',
-                    httpd_util:rfc1123_date(LMod)}|Context#ctx.metadata]}}.
+    {LMod, RD, Ctx#ctx{metadata=[{'last-modified',
+                    httpd_util:rfc1123_date(LMod)}|Ctx#ctx.metadata]}}.
 
 hash_body(Body) -> mochihex:to_hex(binary_to_list(crypto:sha(Body))).
 
-generate_etag(ReqData, Context) ->
-    case maybe_fetch_object(Context, wrq:disp_path(ReqData)) of
-        {true, BodyContext} ->
-            ETag = hash_body(BodyContext#ctx.response_body),
-            {ETag, ReqData,
-             BodyContext#ctx{metadata=[{etag,ETag}|
-                                           BodyContext#ctx.metadata]}};
+generate_etag(RD, Ctx) ->
+    case maybe_fetch_object(Ctx, wrq:disp_path(RD)) of
+        {true, BodyCtx} ->
+            ETag = hash_body(BodyCtx#ctx.response_body),
+            {ETag, RD,
+             BodyCtx#ctx{metadata=[{etag,ETag}|
+                                           BodyCtx#ctx.metadata]}};
         _ ->
-            {undefined, ReqData, Context}
+            {undefined, RD, Ctx}
     end.
 
