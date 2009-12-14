@@ -20,6 +20,7 @@
     is_conflict/2,
     is_authorized/2,
     delete_resource/2,
+    delete_completed/2,
     to_json/2,
     to_text/2,
     from_json/2
@@ -87,7 +88,9 @@ delete_resource(RD, Ctx) ->
             wrq:append_to_response_body("~p, ~p.~n", [Msg, Reason], RD), 
             Ctx}
     end.
-    
+
+delete_completed(RD, Ctx) ->
+    {false, RD, Ctx}.
 
 from_json(RD, Ctx) ->
     DbName = wrq:path_info(dbname, RD),
