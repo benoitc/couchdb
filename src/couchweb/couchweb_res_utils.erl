@@ -12,7 +12,7 @@
 % Some code borrowed to a Basho example under MIT License.
 % @copyright 2008-2009 Basho Technologies, Inc.
 
--module(couchweb_res_static).
+-module(couchweb_res_utils).
 -export([init/1]).
 
 -export([allowed_methods/2,
