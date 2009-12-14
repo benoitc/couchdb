@@ -9,7 +9,8 @@
 % WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 % License for the specific language governing permissions and limitations under
 % the License.
-%% @copyright 2008-2009 Basho Technologies, Inc.
+% Some code borrowed to a Basho example under MIT License.
+% @copyright 2008-2009 Basho Technologies, Inc.
 
 -module(couchweb_res_static).
 -export([init/1]).
