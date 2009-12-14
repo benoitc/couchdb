@@ -20,11 +20,11 @@
 -record(ctx, {trace_dir, trace}).
 
 -define(MAP_EXTERNAL, "static/map.png").
--define(MAP_INTERNAL, "deps/webmachine/docs/http-headers-status-v3.png").
+-define(MAP_INTERNAL, "src/webmachine/trace/http-headers-status-v3.png").
 -define(SCRIPT_EXTERNAL, "static/wmtrace.js").
--define(SCRIPT_INTERNAL, "deps/webmachine/trace/wmtrace.js").
+-define(SCRIPT_INTERNAL, "src/webmachine/trace/wmtrace.js").
 -define(STYLE_EXTERNAL, "static/wmtrace.css").
--define(STYLE_INTERNAL, "deps/webmachine/trace/wmtrace.css").
+-define(STYLE_INTERNAL, "src/webmachine/trace/wmtrace.css").
 
 %%
 %% Dispatch Modifiers

@@ -17,8 +17,7 @@
     content_types_provided/2,
     content_types_accepted/2,
     resource_exists/2,
-    post_is_create/2,
-    create_path/2,
+    is_conflict/2,
     is_authorized/2,
     to_json/2,
     to_text/2,
@@ -29,12 +28,13 @@
 -include_lib("webmachine/webmachine.hrl").
 
 -record(ctx, {
-    db=nil,
+    db,
     user_ctx
 }).
 
 init([]) ->
-    {ok, #ctx{}}.
+    {{trace, "/tmp/traces"}, #ctx{}}. 
+    %%{ok, #ctx{}}.
     
 content_types_provided(RD, Ctx) ->
     {[{"application/json", to_json},
@@ -43,59 +43,58 @@ content_types_provided(RD, Ctx) ->
      RD, Ctx}.
     
     
-     
 content_types_accepted(RD, Ctx) ->
-    {[{"applicatiob/json", from_json}], RD, Ctx}.
-
-post_is_create(RD, Ctx) ->
-    {true, RD, Ctx}.    
-  
-create_path(RD, Ctx) ->
-     DbName = wrq:path_info(dbname, RD),
-     {DbName, RD, Ctx}.
-     
+    {[{"application/json", from_json}], RD, Ctx}.
     
 allowed_methods(RD, Ctx) ->
-    {['GET', 'HEAD', 'DELETE', 'PUT'], 
-    RD, Ctx}.
+    {['GET', 'HEAD', 'PUT', 'DELETE'], RD, Ctx}.
     
 is_authorized(RD, Ctx) ->
     {true, RD, Ctx}.
-     
-resource_exists(RD, Ctx) ->
-    case wrq:path_info(dbname, RD) of
-        undefined ->
+    
+is_conflict(RD, Ctx) ->
+    DbName = wrq:path_info(dbname, RD),
+    UserCtx =  #user_ctx{}, 
+    case couch_db:open(?l2b(DbName),  [{user_ctx, UserCtx}]) of
+        {ok, Db} ->
+            couch_db:close(Db),
             {true, RD, Ctx};
-        DbName ->
-            UserCtx =  #user_ctx{}, 
-            case couch_db:open(?l2b(DbName),  [{user_ctx, UserCtx}]) of
-                {ok, Db} ->
-                    {true, RD, Ctx#ctx{db=Db}};
-                _Error ->
-                    {false, RD, Ctx}
-            end
+        _ ->
+            {false, RD, Ctx}
     end.
         
+resource_exists(RD, Ctx) ->
+    DbName = wrq:path_info(dbname, RD),
+    UserCtx =  #user_ctx{}, 
+    case couch_db:open(?l2b(DbName),  [{user_ctx, UserCtx}]) of
+        {ok, Db} ->
+            {true, RD, Ctx#ctx{db=Db}};
+        _Error ->
+            {false, RD, Ctx}
+    end.
+    
+    
+from_json(RD, Ctx) ->
+    DbName = wrq:path_info(dbname, RD),
+    UserCtx =  #user_ctx{},
+    case couch_server:create(DbName, [{user_ctx, UserCtx}]) of
+        {ok, Db} ->
+            couch_db:close(Db),
+            DocUrl = "/" ++ couch_util:url_encode(DbName),
+            RD1 = wrq:append_to_response_body({[{ok, true}]}, RD),
+            {true, wrq:set_resp_header("Location", DocUrl, RD1), Ctx};
+        Error ->
+            {Code, Msg, Reason} = couchweb_utils:error_info(Error),
+            {{halt,Code},
+                wrq:append_to_response_body("~p, ~p.~n", [Msg, Reason], RD), 
+                Ctx}
+    end.
 
-to_json(RD, Ctx=#ctx{db=nil}) ->
-    Body = {[
-        {couchdb, <<"Welcome">>},
-        {version, list_to_binary(couch_server:get_version())}
-    ]},
-    {?JSON_ENCODE(Body) ++ <<"\n">>, RD, Ctx};        
-       
 to_json(RD, Ctx=#ctx{db=Db}) ->
+    io:format("je ssuis ici"),
     {ok, DbInfo} = couch_db:get_db_info(Db),
     {?JSON_ENCODE({DbInfo}) ++ <<"\n">>, RD, Ctx}.
     
-
 to_text(RD, C0) ->
     {Json, RD1, C1} = to_json(RD, C0),
     {json_pp:print(binary_to_list(list_to_binary(Json))), RD1, C1}.
-    
-from_json(RD, Ctx) ->
-    
-    
-    
-    {RD, Ctx}.
-    

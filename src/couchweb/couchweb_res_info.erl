@@ -27,15 +27,16 @@ init([]) ->
 content_types_provided(Wrq, Ctx) ->
     {[
         {"application/json", to_json},
-        {"text/plain", to_text}
-    ], Wrq, Ctx}.
+        {"text/plain", to_text},
+        {"text/html", to_text}], Wrq, Ctx}.
 
-to_json(Wrq, Ctx) ->
+to_json(RD, Ctx) ->
     Body = {[
         {couchdb, <<"Welcome">>},
         {version, list_to_binary(couch_server:get_version())}
     ]},
-    {?JSON_ENCODE(Body) ++ <<"\n">>, Wrq, Ctx}.
+    {?JSON_ENCODE(Body) ++ <<"\n">>, RD, Ctx}.
 
-to_text(Wrq, Ctx) ->
-    to_json(Wrq, Ctx).
+to_text(RD, C0) ->
+    {Json, RD1, C1} = to_json(RD, C0),
+    {json_pp:print(binary_to_list(list_to_binary(Json))), RD1, C1}.
