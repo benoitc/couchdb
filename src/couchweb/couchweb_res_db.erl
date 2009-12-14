@@ -19,6 +19,7 @@
     resource_exists/2,
     is_conflict/2,
     is_authorized/2,
+    delete_resource/2,
     to_json/2,
     to_text/2,
     from_json/2
@@ -42,9 +43,9 @@ content_types_provided(RD, Ctx) ->
       {"text/html", to_text}],
      RD, Ctx}.
     
-    
 content_types_accepted(RD, Ctx) ->
-    {[{"application/json", from_json}], RD, Ctx}.
+    {[{"application/json", from_json},
+    {"application/octet-stream", from_json}], RD, Ctx}.
     
 allowed_methods(RD, Ctx) ->
     {['GET', 'HEAD', 'PUT', 'DELETE'], RD, Ctx}.
@@ -62,7 +63,10 @@ is_conflict(RD, Ctx) ->
         _ ->
             {false, RD, Ctx}
     end.
-        
+
+
+
+
 resource_exists(RD, Ctx) ->
     DbName = wrq:path_info(dbname, RD),
     UserCtx =  #user_ctx{}, 
@@ -72,26 +76,39 @@ resource_exists(RD, Ctx) ->
         _Error ->
             {false, RD, Ctx}
     end.
+
+delete_resource(RD, Ctx) ->
+    DbName = wrq:path_info(dbname, RD),
+    UserCtx =  #user_ctx{},
+    case couch_server:delete(?l2b(DbName), [{user_ctx, UserCtx}]) of
+    ok ->
+        RD1 = wrq:append_to_response_body(?JSON_ENCODE({[{ok, true}]}), RD),
+        {true, RD1, Ctx};
+    Error ->
+        {Code, Msg, Reason} = couchweb_utils:error_info(Error),
+        {{halt, Code},
+            wrq:append_to_response_body("~p, ~p.~n", [Msg, Reason], RD), 
+            Ctx}
+    end.
     
-    
+
 from_json(RD, Ctx) ->
     DbName = wrq:path_info(dbname, RD),
     UserCtx =  #user_ctx{},
-    case couch_server:create(DbName, [{user_ctx, UserCtx}]) of
+    case couch_server:create(?l2b(DbName), [{user_ctx, UserCtx}]) of
         {ok, Db} ->
             couch_db:close(Db),
             DocUrl = "/" ++ couch_util:url_encode(DbName),
-            RD1 = wrq:append_to_response_body({[{ok, true}]}, RD),
+            RD1 = wrq:append_to_response_body(?JSON_ENCODE({[{ok, true}]}), RD),
             {true, wrq:set_resp_header("Location", DocUrl, RD1), Ctx};
         Error ->
             {Code, Msg, Reason} = couchweb_utils:error_info(Error),
-            {{halt,Code},
+            {{halt, Code},
                 wrq:append_to_response_body("~p, ~p.~n", [Msg, Reason], RD), 
                 Ctx}
     end.
 
 to_json(RD, Ctx=#ctx{db=Db}) ->
-    io:format("je ssuis ici"),
     {ok, DbInfo} = couch_db:get_db_info(Db),
     {?JSON_ENCODE({DbInfo}) ++ <<"\n">>, RD, Ctx}.
     
