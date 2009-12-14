@@ -27,12 +27,14 @@ init([]) ->
 content_types_provided(Wrq, Ctx) ->
     {[
         {"application/json", to_json},
-        {"text/plain", to_text}
+        {"text/plain", to_text},
+        {"text/html", to_text}
     ], Wrq, Ctx}.
 
 to_json(Wrq, Ctx) ->
     {ok, DbNames} = couch_server:all_databases(),
     {?JSON_ENCODE(DbNames) ++ <<"\n">>, Wrq, Ctx}.
 
-to_text(Wrq, Ctx) ->
-    to_json(Wrq, Ctx).
+to_text(RD, C0) ->
+    {Json, RD1, C1} = to_json(RD, C0),
+    {json_pp:print(binary_to_list(list_to_binary(Json))), RD1, C1}.
