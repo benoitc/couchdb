@@ -15,14 +15,9 @@
     init/1,
     allowed_methods/2,
     content_types_provided/2,
-    content_types_accepted/2,
     resource_exists/2,
-    is_conflict/2,
-    delete_resource/2,
-    delete_completed/2,
     to_json/2,
     to_text/2,
-    from_json/2,
     couch_doc_open/4
 ]).
 
@@ -56,23 +51,8 @@ content_types_provided(RD, Ctx) ->
       {"text/html", to_text}],
      RD, Ctx}.
     
-content_types_accepted(RD, Ctx) ->
-    {[{"application/json", from_json},
-    {"application/octet-stream", from_json}], RD, Ctx}.
-    
 allowed_methods(RD, Ctx) ->
-    {['GET', 'HEAD', 'POST', 'PUT', 'DELETE'], RD, Ctx}.
-    
-is_conflict(RD, Ctx) ->
-    DbName = wrq:path_info(dbname, RD),
-    UserCtx =  #user_ctx{}, 
-    case couch_db:open(?l2b(DbName),  [{user_ctx, UserCtx}]) of
-        {ok, Db} ->
-            couch_db:close(Db),
-            {true, RD, Ctx};
-        _ ->
-            {false, RD, Ctx}
-    end.
+    {['GET', 'HEAD'], RD, Ctx}.
 
 resource_exists(RD, Ctx) ->
     DbName = wrq:path_info(dbname, RD),
@@ -116,41 +96,6 @@ resource_exists(RD, Ctx) ->
             end;
         _Error ->
             {false, RD, Ctx}
-    end.
-    
-
-
-delete_resource(RD, Ctx) ->
-    DbName = wrq:path_info(dbname, RD),
-    UserCtx =  #user_ctx{},
-    case couch_server:delete(?l2b(DbName), [{user_ctx, UserCtx}]) of
-    ok ->
-        RD1 = wrq:append_to_response_body(?JSON_ENCODE({[{ok, true}]}), RD),
-        {true, RD1, Ctx};
-    Error ->
-        {Code, Msg, Reason} = couchweb_utils:error_info(Error),
-        {{halt, Code},
-            wrq:append_to_response_body("~p, ~p.~n", [Msg, Reason], RD), 
-            Ctx}
-    end.
-
-delete_completed(RD, Ctx) ->
-    {false, RD, Ctx}.
-
-from_json(RD, Ctx) ->
-    DbName = wrq:path_info(dbname, RD),
-    UserCtx =  #user_ctx{},
-    case couch_server:create(?l2b(DbName), [{user_ctx, UserCtx}]) of
-        {ok, Db} ->
-            couch_db:close(Db),
-            DocUrl = "/" ++ couch_util:url_encode(DbName),
-            RD1 = wrq:append_to_response_body(?JSON_ENCODE({[{ok, true}]}), RD),
-            {true, wrq:set_resp_header("Location", DocUrl, RD1), Ctx};
-        Error ->
-            {Code, Msg, Reason} = couchweb_utils:error_info(Error),
-            {{halt, Code},
-                wrq:append_to_response_body("~p, ~p.~n", [Msg, Reason], RD), 
-                Ctx}
     end.
 
 to_json(RD, Ctx=#ctx{doc=nil, results=Results}) ->
