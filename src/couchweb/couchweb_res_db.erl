@@ -114,4 +114,4 @@ to_json(RD, Ctx=#ctx{db=Db}) ->
     
 to_text(RD, C0) ->
     {Json, RD1, C1} = to_json(RD, C0),
-    {json_pp:print(binary_to_list(list_to_binary(Json))), RD1, C1}.
+    {json_pp:print(?b2l(?l2b(Json))), RD1, C1}.

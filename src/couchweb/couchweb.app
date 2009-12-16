@@ -18,6 +18,7 @@
 	     couchweb_app,
          couchweb_res_all_dbs,
 		 couchweb_res_db,
+		 couchweb_res_doc,
          couchweb_res_info,
          couchweb_res_uuids,
 		 couchweb_res_utils,

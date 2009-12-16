@@ -24,6 +24,7 @@ source_files = \
 	couchweb_app.erl \
 	couchweb_res_all_dbs.erl \
 	couchweb_res_db.erl \
+	couchweb_res_doc.erl \
 	couchweb_res_info.erl \
 	couchweb_res_uuids.erl \
 	couchweb_res_utils.erl \
@@ -37,6 +38,7 @@ compiled_files = \
     couchweb_app.beam \
 	couchweb_res_all_dbs.beam \
 	couchweb_res_db.beam \
+	couchweb_res_doc.beam \
 	couchweb_res_info.beam \
 	couchweb_res_uuids.beam \
 	couchweb_res_utils.beam \
