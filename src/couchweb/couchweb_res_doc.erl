@@ -57,7 +57,13 @@ allowed_methods(RD, Ctx) ->
 
 resource_exists(RD, Ctx) ->
     DbName = wrq:path_info(dbname, RD),
-    DocId =  wrq:path_info(docid, RD),
+    DocId = case wrq:path_info(docid, RD) of 
+        undefined ->
+            DName = wrq:path_info(dname, RD),
+            "_design/" ++ DName;
+        Id -> Id
+    end,
+            
     UserCtx =  #user_ctx{}, 
     case couch_db:open(?l2b(DbName),  [{user_ctx, UserCtx}]) of
         {ok, Db} ->
