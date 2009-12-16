@@ -10,6 +10,16 @@
 % License for the specific language governing permissions and limitations under
 % the License.
 
+-module(couchweb_utils).
+
+-export([doc_etag/1,
+         error_info/1]).
+
+-include_lib("couchdb/couch_db.hrl").
+
+doc_etag(#doc{revs={Start, [DiskRev|_]}}) ->
+    "\"" ++ ?b2l(couch_doc:rev_to_str({Start, DiskRev})) ++ "\"".
+
 error_info({Error, Reason}) when is_list(Reason) ->
     error_info({Error, ?l2b(Reason)});
 error_info(bad_request) ->

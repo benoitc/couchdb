@@ -29,6 +29,7 @@ source_files = \
 	couchweb_res_uuids.erl \
 	couchweb_res_utils.erl \
 	couchweb_sup.erl \
+	couchweb_utils.erl \
 	json_pp
 
 EXTRA_DIST = $(source_files)
@@ -43,6 +44,7 @@ compiled_files = \
 	couchweb_res_uuids.beam \
 	couchweb_res_utils.beam \
 	couchweb_sup.beam \
+	couchweb_utils.beam \
 	json_pp.beam
 
 %.beam: %.erl

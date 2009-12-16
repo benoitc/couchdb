@@ -16,6 +16,7 @@
     allowed_methods/2,
     content_types_provided/2,
     resource_exists/2,
+    generate_etag/2,
     to_json/2,
     to_text/2,
     couch_doc_open/4
@@ -140,6 +141,17 @@ to_text(RD, C0) ->
     end,
     {Body1, RD1, C1}.
     
+
+generate_etag(RD, Ctx=#ctx{doc=nil}) ->
+    {undefined, RD, Ctx};
+generate_etag(RD, Ctx=#ctx{doc=Doc}) ->
+    case Doc#doc.meta of
+    [] ->
+        DiskEtag = couchweb_utils:doc_etag(Doc),
+        {DiskEtag, RD, Ctx};
+    _ ->
+        {undefined, RD, Ctx}
+    end.
     
 % private functions
 
