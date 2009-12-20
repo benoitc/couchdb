@@ -19,14 +19,15 @@ var init_sandbox = function() {
     sandbox.emit = emit;
     sandbox.sum = sum;
     sandbox.log = log;
-    sandbox.toJSON = toJSON;
+    // sandbox.toJSON = Couch.toJSON;
+    sandbox.JSON = JSON;
     sandbox.provides = provides;
     sandbox.registerType = registerType;
     sandbox.start = start;
     sandbox.send = send;
     sandbox.getRow = getRow;
   } catch (e) {
-    log(toJSON(e));
+    log(Couch.toJSON(e));
   }
 };
 init_sandbox();
