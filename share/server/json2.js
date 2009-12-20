@@ -238,13 +238,9 @@ if (!this.JSON) {
 
 // If the value has a toJSON method, call it to obtain a replacement value.
 
-        if (value) {
-            if (value.toXMLString) {
-                value = value.toXMLString();
-            } else if (typeof value === 'object' && 
-                  typeof value.toJSON === 'function') {
-                value = value.toJSON(key);
-            }
+        if (value && typeof value === 'object' &&
+                typeof value.toJSON === 'function') {
+            value = value.toJSON(key);
         }
 
 // If we were called with a replacer function, then call the replacer to
