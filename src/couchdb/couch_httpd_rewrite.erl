@@ -78,6 +78,7 @@ try_bind_path([Dispatch|Rest], Method, PathParts, QueryList) ->
         true ->
             case bind_path(PathParts1, lists:reverse(PathParts), []) of
                 {ok, Remaining, Bindings} ->
+                    
                     % Update QueryList, by default we remove items set 
                     % in QueryArgs
                     QueryList1 = lists:foldl(fun({K, V}, Acc) ->
@@ -92,6 +93,8 @@ try_bind_path([Dispatch|Rest], Method, PathParts, QueryList) ->
                     
                     NewPathParts = make_new_path(RedirectPath, Bindings1, 
                                     Remaining, []),
+                                    
+                    
                     {NewPathParts, Bindings1};         
                 fail ->
                     try_bind_path(Rest, Method, PathParts, QueryList)
@@ -141,7 +144,10 @@ bind_path(_, _, _) ->
 
     
 make_rule(Rule) ->
-    Method = proplists:get_value(<<"method">>, Rule, '*'),
+    Method = case proplists:get_value(<<"method">>, Rule) of
+        undefined -> '*';
+        M -> list_to_atom(?b2l(M))
+    end,
     QueryArgs = case proplists:get_value(<<"query">>, Rule) of
         undefined -> [];
         {Args} -> Args
@@ -171,7 +177,6 @@ path_to_erlang([<<>>|R], Acc) ->
 path_to_erlang([<<"*">>|R], Acc) ->
     path_to_erlang(R, [?MATCH_ALL|Acc]);
 path_to_erlang([P|R], Acc) ->
-     ?LOG_ERROR("got: ~p", [P]),
     P1 = case P of
         <<":", Var/binary>> ->
             list_to_atom(binary_to_list(Var));
