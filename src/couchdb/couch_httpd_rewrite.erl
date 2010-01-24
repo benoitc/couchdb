@@ -29,8 +29,6 @@ handle_rewrite_req(#httpd{
     Prefix = <<"/", DbName/binary, "/", DesignId/binary>>,
     QueryList = couch_httpd:qs(Req),
     
-    
-        
     #doc{body={Props}} = DDoc,
     case proplists:get_value(<<"rewrites">>, Props) of
         undefined ->
@@ -167,25 +165,25 @@ make_rule(Rule) ->
     
 parse_path(Path) ->
     {ok, SlashRE} = re:compile(<<"\\/">>),
-    path_to_erlang(re:split(Path, SlashRE), []).
+    path_to_list(re:split(Path, SlashRE), []).
     
 
-path_to_erlang([], Acc) ->
+path_to_list([], Acc) ->
     Acc;
-path_to_erlang([<<>>|R], Acc) ->
-    path_to_erlang(R, Acc);
-path_to_erlang([<<"*">>|R], Acc) ->
-    path_to_erlang(R, [?MATCH_ALL|Acc]);
-path_to_erlang([P|R], Acc) ->
+path_to_list([<<>>|R], Acc) ->
+    path_to_list(R, Acc);
+path_to_list([<<"*">>|R], Acc) ->
+    path_to_list(R, [?MATCH_ALL|Acc]);
+path_to_list([P|R], Acc) ->
     P1 = case P of
         <<":", Var/binary>> ->
             list_to_atom(binary_to_list(Var));
         _ -> P
     end,
-    path_to_erlang(R, [P1|Acc]).
+    path_to_list(R, [P1|Acc]).
 
 encode_query(Props) ->
     RevPairs = lists:foldl(fun ({K, V}, Acc) ->
-                                   [{K, iolist_to_binary(?JSON_ENCODE(V))} | Acc]
+                                [{K, iolist_to_binary(?JSON_ENCODE(V))} | Acc]
                            end, [], Props),
     lists:flatten(mochiweb_util:urlencode(RevPairs)).
