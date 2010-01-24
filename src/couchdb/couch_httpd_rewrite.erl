@@ -22,7 +22,7 @@
 handle_rewrite_req(#httpd{
         path_parts=[DbName, <<"_design">>, DesignName, _Rewrite|PathParts],
         method=Method,
-        mochi_req=MochiReq}=Req, Db, DDoc) ->
+        mochi_req=MochiReq}=Req, _Db, DDoc) ->
     
     % we are in a design handler
     DesignId = <<"_design/", DesignName/binary>>,
@@ -36,7 +36,7 @@ handle_rewrite_req(#httpd{
                             <<"Invalid path.">>);
         Rules ->
             DispatchList =  [make_rule(Rule) || {Rule} <- Rules],
-            NewPath = case try_bind_path(DispatchList, Method, PathParts, 
+            RawPath = case try_bind_path(DispatchList, Method, PathParts, 
                                     QueryList) of
                 no_dispatch_path ->
                     throw(not_found);
@@ -48,23 +48,29 @@ handle_rewrite_req(#httpd{
                             [] -> [];
                             _ -> [$?, encode_query(Bindings)]
                         end),
-                    io:format("ici"),  
                     case mochiweb_util:safe_relative_path(Path) of
                         undefined -> Prefix ++ "/" ++ ?l2b(Path);
                         P1 -> ?b2l(Prefix) ++ "/" ++ P1
                     end
                    
                 end,
-            {"/" ++ NewPath2, _, _} = mochiweb_util:urlsplit_path(NewPath),
+            RawPath1 = ?b2l(iolist_to_binary(RawPath)),
+            {"/" ++ NewPath2, _, _} = mochiweb_util:urlsplit_path(RawPath1),
             NewPathParts1 = [list_to_binary(couch_httpd:unquote(Part))
                             || Part <- string:tokens(NewPath2, "/")],
-            ?LOG_INFO("rewrite to ~p ~n", [iolist_to_binary(NewPath)]),
+                            
+            ?LOG_INFO("rewrite to ~p ~n", [RawPath1]),
 
+            MochiReq1 = mochiweb_request:new(MochiReq:get(socket),
+                                             MochiReq:get(method),
+                                             RawPath1,
+                                             MochiReq:get(version),
+                                             MochiReq:get(headers)),
+            MochiReq1:cleanup(),
+                        
             couch_httpd_db:handle_request(Req#httpd{
                         path_parts=NewPathParts1,
-                        mochi_req=mochiweb_request:new(MochiReq:get(socket),
-                        MochiReq:get(method), iolist_to_binary(NewPath), MochiReq:get(version),
-                        MochiReq:get(headers))})
+                        mochi_req=MochiReq1})
         end.
             
 
@@ -76,31 +82,62 @@ try_bind_path([Dispatch|Rest], Method, PathParts, QueryList) ->
         true ->
             case bind_path(PathParts1, lists:reverse(PathParts), []) of
                 {ok, Remaining, Bindings} ->
+                    Bindings1 = Bindings ++ QueryList,
                     
-                    % Update QueryList, by default we remove items set 
-                    % in QueryArgs
-                    QueryList1 = lists:foldl(fun({K, V}, Acc) ->
-                            RevPair = case proplist:is_defined(K, QueryArgs) of
-                                true -> [];
-                                false -> [{K, ?JSON_DECODE(V)}]
+                    % we parse query args from the rule and fill 
+                    % it eventually with bindings var
+                    Bindings2 = Bindings1 ++ make_query_list(QueryArgs, 
+                                                    Bindings1, []),
+                                                    
+                    % keep only unique value
+                    FinalBindings = lists:foldl(fun ({K, V}, Acc) ->
+                        KV = case proplists:is_defined(K, Acc) of
+                            true -> [];
+                            false ->
+                                [{K, V}]
                             end,
-                            RevPair ++ Acc
-                        end, [], QueryList),
-                    QueryParams = QueryList1 ++ QueryArgs,
-                    Bindings1 = Bindings ++ QueryParams,
+                            Acc ++ KV
+                    end, [], Bindings2),
                     
-                    NewPathParts = make_new_path(RedirectPath, Bindings1, 
+                    NewPathParts = make_new_path(RedirectPath, FinalBindings, 
                                     Remaining, []),
                                     
-                    
-                    {NewPathParts, Bindings1};         
+                    {NewPathParts, FinalBindings};         
                 fail ->
                     try_bind_path(Rest, Method, PathParts, QueryList)
             end;    
         false ->
             try_bind_path(Rest, Method, PathParts, QueryList)
     end.
-
+    
+make_query_list([], _Bindings, Acc) ->
+    Acc;
+make_query_list([{Key, {Value}}|Rest], Bindings, Acc) ->
+    Value1 = make_query_list(Value, Bindings, []),
+    make_query_list(Rest, Bindings, [{to_atom(Key), Value1}|Acc]);
+make_query_list([{Key, Value}|Rest], Bindings, Acc) when is_binary(Value) ->
+    Value1 = replace_var(Value, Bindings),
+    make_query_list(Rest, Bindings, [{to_atom(Key), Value1}|Acc]);
+make_query_list([{Key, Value}|Rest], Bindings, Acc) when is_list(Value) ->    
+    Value1 = replace_vars(Value, Bindings, []),
+    make_query_list(Rest, Bindings, [{to_atom(Key), Value1}|Acc]);
+make_query_list([{Key, Value}|Rest], Bindings, Acc) ->
+    make_query_list(Rest, Bindings, [{to_atom(Key), Value}|Acc]).
+    
+replace_vars([], _Bindings, Acc) ->
+    lists:reverse(Acc);
+replace_vars([V|R], Bindings, Acc) ->
+    V1 = replace_var(V, Bindings),
+    replace_vars(R, Bindings, [V1|Acc]).
+    
+replace_var(Value, Bindings) ->
+    case Value of
+        <<":", Var/binary>> ->
+            Var1 = list_to_atom(binary_to_list(Var)),
+            io:format("var ~p ~p ~p ~n", [Var1, Bindings, proplists:get_value(Var1, Bindings, Value)]),
+            proplists:get_value(Var1, Bindings, Value);
+        _ -> Value
+    end.
 
 make_new_path([], _Bindings, _Remaining, Acc) ->
     Acc;
@@ -184,6 +221,23 @@ path_to_list([P|R], Acc) ->
 
 encode_query(Props) ->
     RevPairs = lists:foldl(fun ({K, V}, Acc) ->
-                                [{K, iolist_to_binary(?JSON_ENCODE(V))} | Acc]
+                                V1 = case K of
+                                    <<"endkey">> ->
+                                        iolist_to_binary(?JSON_ENCODE(V));
+                                    <<"key">> ->
+                                        iolist_to_binary(?JSON_ENCODE(V));
+                                    <<"startkey">> ->
+                                        iolist_to_binary(?JSON_ENCODE(V));
+                                    _ -> V
+                                end,
+                                        
+        
+                                [{K, V1} | Acc]
                            end, [], Props),
     lists:flatten(mochiweb_util:urlencode(RevPairs)).
+    
+to_atom(V) when is_binary(V) ->
+    to_atom(?b2l(V));
+to_atom(V) ->
+    list_to_atom(V).
+    

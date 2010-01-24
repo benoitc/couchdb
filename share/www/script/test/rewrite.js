@@ -54,8 +54,53 @@ couchTests.rewrite = function(debug) {
               "from": "hello/:id",
               "to": "_update/hello/:id",
               "method": "PUT"
+            },
+            {
+              "from": "/welcome/:name",
+              "to": "_show/welcome",
+              "query": {
+                "name": ":name"
+              }
+            },
+            {
+              "from": "simpleForm/basicViewFixed",
+              "to": "_list/simpleForm/basicView",
+              "query": {
+                "startkey": 3,
+                "endkey": 8
+              }
+            },
+            {
+              "from": "simpleForm/basicViewPath/:start/:end",
+              "to": "_list/simpleForm/basicView",
+              "query": {
+                "startkey": ":start",
+                "endkey": ":end"
+              }
             }
+            
           ],
+          lists: {
+            simpleForm: stringFun(function(head, req) {
+              log("simpleForm");
+              send('<ul>');
+              var row, row_number = 0, prevKey, firstKey = null;
+              while (row = getRow()) {
+                row_number += 1;
+                if (!firstKey) firstKey = row.key;
+                prevKey = row.key;
+                send('\n<li>Key: '+row.key
+                +' Value: '+row.value
+                +' LineNo: '+row_number+'</li>');
+              }
+              return '</ul><p>FirstKey: '+ firstKey + ' LastKey: '+ prevKey+'</p>';
+            })
+          },
+          shows: {
+            "welcome": stringFun(function(doc,req) {
+              return "Welcome " + req.query["name"];
+            })
+          },
           updates: {
             "hello" : stringFun(function(doc, req) {
               if (!doc) {
@@ -70,10 +115,20 @@ couchTests.rewrite = function(debug) {
               doc.edited_by = req.userCtx;
               return [doc, "hello doc"];
             })
+          },
+          views : {
+            basicView : {
+              map : stringFun(function(doc) {
+                emit(doc.integer, doc.string);
+              })
+            }
           }
         }
  
         db.save(designDoc);
+        
+        var docs = makeDocs(0, 10);
+        db.bulkSave(docs);
  
         // test simple rewriting
  
@@ -101,6 +156,24 @@ couchTests.rewrite = function(debug) {
  
         doc = db.open(docid);
         T(doc.world == "hello");
+        
+        req = CouchDB.request("GET", "/test_suite_db/_design/test/_rewrite/welcome/user");
+        T(req.responseText == "Welcome user");
+        
+        
+        // get with query params
+        xhr = CouchDB.request("GET", "/test_suite_db/_design/test/_rewrite/simpleForm/basicViewFixed");
+        T(xhr.status == 200, "with query params");
+        T(!(/Key: 1/.test(xhr.responseText)));
+        T(/FirstKey: 3/.test(xhr.responseText));
+        T(/LastKey: 8/.test(xhr.responseText));
+        
+        // get with query params
+        xhr = CouchDB.request("GET", "/test_suite_db/_design/test/_rewrite/simpleForm/basicViewPath/3/8");
+        T(xhr.status == 200, "with query params");
+        T(!(/Key: 1/.test(xhr.responseText)));
+        T(/FirstKey: 3/.test(xhr.responseText));
+        T(/LastKey: 8/.test(xhr.responseText));
         
   });
   
