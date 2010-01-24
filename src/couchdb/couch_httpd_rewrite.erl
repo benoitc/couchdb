@@ -12,12 +12,17 @@
 %
 % bind_path is based on bind method from Webmachine
 
+
+%% @doc Module for URL-dispatch by pattern matching.
+
 -module(couch_httpd_rewrite).
 -export([handle_rewrite_req/3]).
 -include("couch_db.hrl").
 
 -define(SEPARATOR, $\/).
 -define(MATCH_ALL, '*').
+
+
 
 handle_rewrite_req(#httpd{
         path_parts=[DbName, <<"_design">>, DesignName, _Rewrite|PathParts],
@@ -85,7 +90,7 @@ try_bind_path([Dispatch|Rest], Method, PathParts, QueryList) ->
                     Bindings1 = Bindings ++ QueryList,
                     
                     % we parse query args from the rule and fill 
-                    % it eventually with bindings var
+                    % it eventually with bindings vars
                     Bindings2 = Bindings1 ++ make_query_list(QueryArgs, 
                                                     Bindings1, []),
                                                     
@@ -98,7 +103,6 @@ try_bind_path([Dispatch|Rest], Method, PathParts, QueryList) ->
                             end,
                             Acc ++ KV
                     end, [], Bindings2),
-                    
                     NewPathParts = make_new_path(RedirectPath, FinalBindings, 
                                     Remaining, []),
                                     
@@ -118,7 +122,8 @@ make_query_list([{Key, {Value}}|Rest], Bindings, Acc) ->
 make_query_list([{Key, Value}|Rest], Bindings, Acc) when is_binary(Value) ->
     Value1 = replace_var(Value, Bindings),
     make_query_list(Rest, Bindings, [{to_atom(Key), Value1}|Acc]);
-make_query_list([{Key, Value}|Rest], Bindings, Acc) when is_list(Value) ->    
+make_query_list([{Key, Value}|Rest], Bindings, Acc) when is_list(Value) ->
+
     Value1 = replace_vars(Value, Bindings, []),
     make_query_list(Rest, Bindings, [{to_atom(Key), Value1}|Acc]);
 make_query_list([{Key, Value}|Rest], Bindings, Acc) ->
@@ -134,7 +139,6 @@ replace_var(Value, Bindings) ->
     case Value of
         <<":", Var/binary>> ->
             Var1 = list_to_atom(binary_to_list(Var)),
-            io:format("var ~p ~p ~p ~n", [Var1, Bindings, proplists:get_value(Var1, Bindings, Value)]),
             proplists:get_value(Var1, Bindings, Value);
         _ -> Value
     end.
@@ -221,20 +225,29 @@ path_to_list([P|R], Acc) ->
 
 encode_query(Props) ->
     RevPairs = lists:foldl(fun ({K, V}, Acc) ->
-                                V1 = case K of
-                                    <<"endkey">> ->
-                                        iolist_to_binary(?JSON_ENCODE(V));
-                                    <<"key">> ->
-                                        iolist_to_binary(?JSON_ENCODE(V));
-                                    <<"startkey">> ->
-                                        iolist_to_binary(?JSON_ENCODE(V));
-                                    _ -> V
-                                end,
-                                        
+        V2 = case K of
+            <<"endkey">> ->
+                iolist_to_binary(?JSON_ENCODE(V));
+            <<"key">> ->
+                iolist_to_binary(?JSON_ENCODE(V));
+            <<"startkey">> ->
+                iolist_to_binary(?JSON_ENCODE(V));
+            _ -> 
+                to_json(V)
+        end,              
+        [{K, V2} | Acc]
         
-                                [{K, V1} | Acc]
-                           end, [], Props),
+    end, [], Props),
     lists:flatten(mochiweb_util:urlencode(RevPairs)).
+    
+
+
+to_json({V}) ->
+    iolist_to_binary(?JSON_ENCODE({V}));
+to_json(V) when is_list(V) ->
+    iolist_to_binary(?JSON_ENCODE(V));
+to_json(V) ->
+    V.
     
 to_atom(V) when is_binary(V) ->
     to_atom(?b2l(V));
