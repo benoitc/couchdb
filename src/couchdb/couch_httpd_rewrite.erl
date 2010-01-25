@@ -239,8 +239,6 @@ encode_query(Props) ->
         
     end, [], Props),
     lists:flatten(mochiweb_util:urlencode(RevPairs)).
-    
-
 
 to_json({V}) ->
     iolist_to_binary(?JSON_ENCODE({V}));
