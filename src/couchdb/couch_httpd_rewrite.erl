@@ -86,6 +86,7 @@ try_bind_path([Dispatch|Rest], Method, PathParts, QueryList) ->
     case bind_method(Method1, Method) of
         true ->
             case bind_path(PathParts1, lists:reverse(PathParts), []) of
+                
                 {ok, Remaining, Bindings} ->
                     Bindings1 = Bindings ++ QueryList,
                     
@@ -93,7 +94,7 @@ try_bind_path([Dispatch|Rest], Method, PathParts, QueryList) ->
                     % it eventually with bindings vars
                     Bindings2 = Bindings1 ++ make_query_list(QueryArgs, 
                                                     Bindings1, []),
-                                                    
+                                            
                     % keep only unique value
                     FinalBindings = lists:foldl(fun ({K, V}, Acc) ->
                         KV = case proplists:is_defined(K, Acc) of
@@ -144,12 +145,12 @@ replace_var(Value, Bindings) ->
     end.
 
 make_new_path([], _Bindings, _Remaining, Acc) ->
-    Acc;
+    lists:reverse(Acc);
 make_new_path([?MATCH_ALL], _Bindings, Remaining, Acc) ->
-    Acc1 = Acc ++ Remaining,
+    Acc1 = lists:reverse(Acc) ++ Remaining,
     Acc1;
 make_new_path([?MATCH_ALL|_Rest], _Bindings, Remaining, Acc) ->
-    Acc1 = Acc ++ Remaining,
+    Acc1 = lists:reverse(Acc) ++ Remaining,
     Acc1;
 make_new_path([P|Rest], Bindings, Remaining, Acc) when is_atom(P) ->
     P2 = case proplists:get_value(P, Bindings) of 
@@ -200,7 +201,7 @@ make_rule(Rule) ->
         undefined ->  
             throw({error, invalid_rewrite_target});
         To ->
-            parse_path(To)
+            lists:reverse(parse_path(To))
         end,
     [{FromParts, Method}, ToParts, QueryArgs].
     
