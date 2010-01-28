@@ -53,13 +53,18 @@ handle_rewrite_req(#httpd{
                             [] -> [];
                             _ -> [$?, encode_query(Bindings)]
                         end),
+                    
                     case mochiweb_util:safe_relative_path(Path) of
-                        undefined -> Prefix ++ "/" ++ ?l2b(Path);
-                        P1 -> ?b2l(Prefix) ++ "/" ++ P1
+                        undefined -> 
+                            ?b2l(Prefix) ++ "/" ++ Path;
+                        P1 -> 
+                            ?b2l(Prefix) ++ "/" ++ P1
                     end
                    
                 end,
-            RawPath1 = ?b2l(iolist_to_binary(RawPath)),
+
+            RawPath1 = normalize_path(RawPath),
+            
             {"/" ++ NewPath2, _, _} = mochiweb_util:urlsplit_path(RawPath1),
             NewPathParts1 = [list_to_binary(couch_httpd:unquote(Part))
                             || Part <- string:tokens(NewPath2, "/")],
@@ -83,7 +88,6 @@ try_bind_path([], _Method, _PathParts, _QueryList) ->
     no_dispatch_path;        
 try_bind_path([Dispatch|Rest], Method, PathParts, QueryList) ->
     [{PathParts1, Method1}, RedirectPath, QueryArgs] = Dispatch,
-    ?LOG_DEBUG("make rule ~p~nwith ~p", [Dispatch, PathParts]),
     case bind_method(Method1, Method) of
         true ->
             case bind_path(PathParts1, PathParts, []) of
@@ -182,6 +186,28 @@ bind_path([Token|RestToken], [Token|RestMatch], Bindings) ->
     bind_path(RestToken, RestMatch, Bindings);
 bind_path(_, _, _) ->
     fail.
+    
+
+%% normalize path.
+
+normalize_path(Path)  ->
+    "/" ++ string:join(normalize_path1(string:tokens(Path, 
+                "/"), []), [?SEPARATOR]).
+    
+    
+normalize_path1([], Acc) ->
+    lists:reverse(Acc);
+normalize_path1([".."|Rest], Acc) ->
+    Acc1 = case Acc of
+        [] -> [".."|Acc];
+        [T|_] when T =:= ".." -> [".."|Acc];
+        [_|R] -> R
+    end,
+    normalize_path1(Rest, Acc1);
+normalize_path1(["."|Rest], Acc) ->
+    normalize_path1(Rest, Acc);
+normalize_path1([Path|Rest], Acc) ->
+    normalize_path1(Rest, [Path|Acc]).
 
     
 make_rule(Rule) ->
