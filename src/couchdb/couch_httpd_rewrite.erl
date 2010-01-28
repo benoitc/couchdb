@@ -83,9 +83,10 @@ try_bind_path([], _Method, _PathParts, _QueryList) ->
     no_dispatch_path;        
 try_bind_path([Dispatch|Rest], Method, PathParts, QueryList) ->
     [{PathParts1, Method1}, RedirectPath, QueryArgs] = Dispatch,
+    ?LOG_DEBUG("make rule ~p~nwith ~p", [Dispatch, PathParts]),
     case bind_method(Method1, Method) of
         true ->
-            case bind_path(PathParts1, lists:reverse(PathParts), []) of
+            case bind_path(PathParts1, PathParts, []) of
                 
                 {ok, Remaining, Bindings} ->
                     Bindings1 = Bindings ++ QueryList,
@@ -201,7 +202,7 @@ make_rule(Rule) ->
         undefined ->  
             throw({error, invalid_rewrite_target});
         To ->
-            lists:reverse(parse_path(To))
+            parse_path(To)
         end,
     [{FromParts, Method}, ToParts, QueryArgs].
     
@@ -211,7 +212,7 @@ parse_path(Path) ->
     
 
 path_to_list([], Acc) ->
-    Acc;
+    lists:reverse(Acc);
 path_to_list([<<>>|R], Acc) ->
     path_to_list(R, Acc);
 path_to_list([<<"*">>|R], Acc) ->
