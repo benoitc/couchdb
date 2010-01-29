@@ -63,10 +63,10 @@ handle_rewrite_req(#httpd{
                    
                 end,
 
-            RawPath1 = normalize_path(RawPath),
+            RawPath1 = ?b2l(iolist_to_binary(normalize_path(RawPath))),
             
             {"/" ++ NewPath2, _, _} = mochiweb_util:urlsplit_path(RawPath1),
-            NewPathParts1 = [list_to_binary(couch_httpd:unquote(Part))
+            NewPathParts1 = [?l2b(couch_httpd:unquote(Part))
                             || Part <- string:tokens(NewPath2, "/")],
                             
             ?LOG_INFO("rewrite to ~p ~n", [RawPath1]),
