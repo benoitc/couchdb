@@ -77,6 +77,10 @@ couchTests.rewrite = function(debug) {
               "method": "GET"
             },
             {
+              "from": "simpleForm/basicView",
+              "to": "_list/simpleForm/basicView",
+            },
+            {
               "from": "simpleForm/basicViewFixed",
               "to": "_list/simpleForm/basicView",
               "query": {
@@ -204,6 +208,12 @@ couchTests.rewrite = function(debug) {
         
         
         // get with query params
+        xhr = CouchDB.request("GET", "/test_suite_db/_design/test/_rewrite/simpleForm/basicView?startkey=3&endkey=8");
+        T(xhr.status == 200, "with query params");
+        T(!(/Key: 1/.test(xhr.responseText)));
+        T(/FirstKey: 3/.test(xhr.responseText));
+        T(/LastKey: 8/.test(xhr.responseText));
+        
         xhr = CouchDB.request("GET", "/test_suite_db/_design/test/_rewrite/simpleForm/basicViewFixed");
         T(xhr.status == 200, "with query params");
         T(!(/Key: 1/.test(xhr.responseText)));
