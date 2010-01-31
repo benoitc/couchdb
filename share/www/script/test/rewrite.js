@@ -63,6 +63,16 @@ couchTests.rewrite = function(debug) {
               }
             },
             {
+              "from": "/welcome2/:name",
+              "to": "_update/welcome2/:name",
+              "method": "PUT"
+            },
+            {
+              "from": "/welcome2/:name",
+              "to": "_show/welcome2/:name",
+              "method": "GET"
+            },
+            {
               "from": "simpleForm/basicViewFixed",
               "to": "_list/simpleForm/basicView",
               "query": {
@@ -99,20 +109,35 @@ couchTests.rewrite = function(debug) {
           shows: {
             "welcome": stringFun(function(doc,req) {
               return "Welcome " + req.query["name"];
+            }),
+            "welcome2": stringFun(function(doc, req) {
+              return "Welcome " + doc.name;
             })
           },
           updates: {
             "hello" : stringFun(function(doc, req) {
               if (!doc) {
-                if (req.docId) {
+                if (req.id) {
                   return [{
-                    _id : req.docId
+                    _id : req.id
                   }, "New World"]
                 }
                 return [null, "Empty World"];
               }
               doc.world = "hello";
               doc.edited_by = req.userCtx;
+              return [doc, "hello doc"];
+            }),
+            "welcome2": stringFun(function(doc, req) {
+              if (!doc) {
+                if (req.id) {
+                  return [{
+                    _id: req.id,
+                    name: req.id
+                  }, "New World"]
+                }
+                return [null, "Empty World"];
+              }
               return [doc, "hello doc"];
             })
           },
@@ -157,6 +182,15 @@ couchTests.rewrite = function(debug) {
         doc = db.open(docid);
         T(doc.world == "hello");
         
+        xhr = CouchDB.request("PUT", "/test_suite_db/_design/test/_rewrite/welcome2/test");
+        T(xhr.status == 201);
+        T(xhr.responseText == "New World");
+        T(/charset=utf-8/.test(xhr.getResponseHeader("Content-Type")));
+        
+        xhr = CouchDB.request("GET", "/test_suite_db/_design/test/_rewrite/welcome2/test");
+        T(xhr.responseText == "Welcome test");
+        
+        
         req = CouchDB.request("GET", "/test_suite_db/_design/test/_rewrite/welcome/user");
         T(req.responseText == "Welcome user");
         
@@ -169,11 +203,20 @@ couchTests.rewrite = function(debug) {
         T(/LastKey: 8/.test(xhr.responseText));
         
         // get with query params
+        xhr = CouchDB.request("GET", "/test_suite_db/_design/test/_rewrite/simpleForm/basicViewFixed?startkey=4");
+        T(xhr.status == 200, "with query params");
+        T(!(/Key: 1/.test(xhr.responseText)));
+        T(/FirstKey: 3/.test(xhr.responseText));
+        T(/LastKey: 8/.test(xhr.responseText));
+        
+        // get with query params
         xhr = CouchDB.request("GET", "/test_suite_db/_design/test/_rewrite/simpleForm/basicViewPath/3/8");
         T(xhr.status == 200, "with query params");
         T(!(/Key: 1/.test(xhr.responseText)));
         T(/FirstKey: 3/.test(xhr.responseText));
         T(/LastKey: 8/.test(xhr.responseText));
+        
+        
         
   });
   

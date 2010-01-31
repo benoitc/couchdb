@@ -199,19 +199,21 @@ try_bind_path([Dispatch|Rest], Method, PathParts, QueryList) ->
                     Bindings1 = Bindings ++ QueryList,
                     
                     % we parse query args from the rule and fill 
-                    % it eventually with bindings vars
-                    Bindings2 = Bindings1 ++ make_query_list(QueryArgs, 
-                                                    Bindings1, []),
-                                            
-                    % keep only unique value
-                    FinalBindings = lists:foldl(fun ({K, V}, Acc) ->
-                        KV = case proplists:is_defined(K, Acc) of
-                            true -> [];
-                            false ->
-                                [{K, V}]
-                            end,
-                            Acc ++ KV
-                    end, [], Bindings2),
+                    % it eventually with bindings vars                    
+                    QueryArgs1 = make_query_list(QueryArgs, Bindings1, []),
+
+                    % remove params in QueryLists1 that are already in 
+                    % QueryArgs1
+                    Bindings2 = lists:foldl(fun({K, V}, Acc) ->
+                        K1 = to_atom(K),
+                        KV = case proplists:get_value(K1, QueryArgs1) of
+                            undefined -> [{K1, V}];
+                            _V1 -> []
+                        end,
+                        Acc ++ KV
+                    end, [], Bindings1),
+
+                    FinalBindings = Bindings2 ++ QueryArgs1,
                     NewPathParts = make_new_path(RedirectPath, FinalBindings, 
                                     Remaining, []),
                                     
@@ -395,7 +397,9 @@ to_json(V) when is_list(V) ->
     iolist_to_binary(?JSON_ENCODE(V));
 to_json(V) ->
     V.
-    
+  
+to_atom(V) when is_atom(V) ->
+    V; 
 to_atom(V) when is_binary(V) ->
     to_atom(?b2l(V));
 to_atom(V) ->
