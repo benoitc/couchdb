@@ -374,29 +374,26 @@ path_to_list([P|R], Acc) ->
 
 
 
+
+
 encode_query(Props) ->
+    ?LOG_INFO("props ~p", [Props]),
     RevPairs = lists:foldl(fun ({K, V}, Acc) ->
-        V2 = case K of
-            <<"endkey">> ->
-                iolist_to_binary(?JSON_ENCODE(V));
-            <<"key">> ->
-                iolist_to_binary(?JSON_ENCODE(V));
-            <<"startkey">> ->
-                iolist_to_binary(?JSON_ENCODE(V));
+        V1 = case V of
+            {_} ->
+                to_json(V);
+            [_]->
+                to_json(V);
             _ -> 
-                to_json(V)
+                mochiweb_util:quote_plus(V)
         end,              
-        [{K, V2} | Acc]
+        [{K,  V1} | Acc]
         
     end, [], Props),
     lists:flatten(mochiweb_util:urlencode(RevPairs)).
 
-to_json({V}) ->
-    iolist_to_binary(?JSON_ENCODE({V}));
-to_json(V) when is_list(V) ->
-    iolist_to_binary(?JSON_ENCODE(V));
 to_json(V) ->
-    V.
+    iolist_to_binary(?JSON_ENCODE(V)).
   
 to_atom(V) when is_atom(V) ->
     V; 

@@ -56,6 +56,10 @@ couchTests.rewrite = function(debug) {
               "method": "PUT"
             },
             {
+              "from": "/welcome",
+              "to": "_show/welcome"
+            },
+            {
               "from": "/welcome/:name",
               "to": "_show/welcome",
               "query": {
@@ -112,7 +116,7 @@ couchTests.rewrite = function(debug) {
             }),
             "welcome2": stringFun(function(doc, req) {
               return "Welcome " + doc.name;
-            })
+            }),
           },
           updates: {
             "hello" : stringFun(function(doc, req) {
@@ -190,9 +194,13 @@ couchTests.rewrite = function(debug) {
         xhr = CouchDB.request("GET", "/test_suite_db/_design/test/_rewrite/welcome2/test");
         T(xhr.responseText == "Welcome test");
         
+        req = CouchDB.request("GET", "/test_suite_db/_design/test/_rewrite/welcome?name=user");
+        T(req.responseText == "Welcome user");
         
         req = CouchDB.request("GET", "/test_suite_db/_design/test/_rewrite/welcome/user");
         T(req.responseText == "Welcome user");
+        
+        
         
         
         // get with query params
