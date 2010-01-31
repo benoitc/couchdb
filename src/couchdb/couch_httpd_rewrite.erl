@@ -165,7 +165,7 @@ handle_rewrite_req(#httpd{
             NewPathParts1 = [?l2b(couch_httpd:unquote(Part))
                             || Part <- string:tokens(NewPath2, "/")],
                             
-            ?LOG_INFO("rewrite to ~p ~n", [RawPath1]),
+            ?LOG_DEBUG("rewrite to ~p ~n", [RawPath1]),
 
             % build a new mochiweb request
             MochiReq1 = mochiweb_request:new(MochiReq:get(socket),
