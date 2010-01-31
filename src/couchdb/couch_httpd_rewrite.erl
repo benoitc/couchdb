@@ -80,7 +80,7 @@
 %% Dispatch rule            URL             TO                  Tokens
 %%
 %% {"from": "/a/b",         /a/b?k=v        /some/b?k=v         var =:= b
-%% "to": "/some/"}
+%% "to": "/some/"}                                              k = v
 %%
 %% {"from": "/a/b",         /a/b            /some/b?var=b       var =:= b
 %% "to": "/some/:var"}          
@@ -101,6 +101,10 @@
 %% "to": "/some",
 %%  "query": { 
 %%      "k": ":foo"
+%%  }}
+%%
+%% {"from": "/a",           /a?foo=b        /some/b             foo =:= b
+%% "to": "/some/:foo",
 %%  }}
 
 
