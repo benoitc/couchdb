@@ -13,7 +13,7 @@
 % bind_path is based on bind method from Webmachine
 
 
-%% @doc Module for URL-dispatch by pattern matching.
+%% @doc Module for URL rewriting by pattern matching.
 
 -module(couch_httpd_rewrite).
 -export([handle_rewrite_req/3]).
@@ -21,6 +21,87 @@
 
 -define(SEPARATOR, $\/).
 -define(MATCH_ALL, '*').
+
+
+%% doc The http rewrite handler. All rewriting is done from 
+%% /dbname/_design/ddocname/_rewrite by default.
+%%
+%% each rules should be in rewrites member of the design doc.
+%% Ex of a complete rule :
+%%
+%%  { 
+%%      .... 
+%%      "rewrite": [ 
+%%      { 
+%%          "from": "", 
+%%          "to": "index.html", 
+%%          "method": "GET", 
+%%          "query": {} 
+%%      } 
+%%      ] 
+%%  } 
+%%
+%%  from: is the path rule used to bind current uri to the rule. It 
+%% use pattern matching for that.
+%%
+%%  to: rule to rewrite an url. It can contain variables depending on binding
+%% variables discovered during pattern matching and query args (url args and from
+%% the query member.)
+%%
+%%  method: method to bind the request method to the rule. by default "*"
+%%  query: query args you want to define they can contain dynamic variable
+%% by binding the key to the bindings
+%% 
+%%
+%% to and from are path with  patterns. pattern can be string starting with ":" or
+%% "*". ex:
+%% /somepath/:var/*
+%%
+%% This path are converted in erlang list by splitting "/". Each var are 
+%% converted in atom. "*" is converted to '*' atom. The pattern matching is done
+%% by splitting "/" in request url in a list of token. A string pattern will 
+%% match equal token. The star atom ('*' in single quotes) will match any number 
+%% of tokens, but may only be present as the last pathtern in a pathspec. If all 
+%% tokens are matched and all pathterms are used, then the pathspec matches. It works
+%% like webmachine. Each identified token will be reused in to rule and in query
+%%
+%% The pattern matching is done by first matching the request method to a rule. by 
+%% default all methods match a rule. (method is equal to "*" by default). Then
+%% It will try to match the path to one rule. If no rule match, then a 404 error 
+%% is displayed.
+%% 
+%% Once a rule is found we rewrite the request url using the "to" and
+%% "query" members. The identified token are matched to the rule and 
+%% will replace var. if '*' is found in the rule it will contain the remaining
+%% part if it exists.
+%%
+%% Examples:
+%%
+%% Dispatch rule            URL             TO                  Tokens
+%%
+%% {"from": "/a/b",         /a/b?k=v        /some/b?k=v         var =:= b
+%% "to": "/some/"}
+%%
+%% {"from": "/a/b",         /a/b            /some/b?var=b       var =:= b
+%% "to": "/some/:var"}          
+%%
+%% {"from": "/a",           /a              /some  
+%% "to": "/some/*"}
+%%
+%% {"from": "/a/*",         /a/b/c          /some/b/c  
+%% "to": "/some/*"}
+%%
+%% {"from": "/a",           /a              /some  
+%% "to": "/some/*"}
+%%
+%% {"from": "/a/:foo/*",    /a/b/c          /some/b/c?foo=b     foo =:= b
+%% "to": "/some/:foo/*"}
+%%
+%% {"from": "/a/:foo",     /a/b             /some/?k=b&foo=b    foo =:= b
+%% "to": "/some",
+%%  "query": { 
+%%      "k": ":foo"
+%%  }}
 
 
 
@@ -35,18 +116,26 @@ handle_rewrite_req(#httpd{
     QueryList = couch_httpd:qs(Req),
     
     #doc{body={Props}} = DDoc,
+    
+    % get rules from ddoc
     case proplists:get_value(<<"rewrites">>, Props) of
         undefined ->
             couch_httpd:send_error(Req, 404, <<"rewrite_error">>, 
                             <<"Invalid path.">>);
         Rules ->
+            % create dispatch list from rules
             DispatchList =  [make_rule(Rule) || {Rule} <- Rules],
+            
+            %% get raw path by matching url to a rule.
             RawPath = case try_bind_path(DispatchList, Method, PathParts, 
                                     QueryList) of
                 no_dispatch_path ->
                     throw(not_found);
                 {NewPathParts, Bindings} -> 
                     Parts = [mochiweb_util:quote_plus(X) || X <- NewPathParts],
+                    
+                    % build new path, reencode query args, eventually convert 
+                    % them to json
                     Path = lists:append(
                         string:join(Parts, [?SEPARATOR]),
                         case Bindings of
@@ -54,6 +143,7 @@ handle_rewrite_req(#httpd{
                             _ -> [$?, encode_query(Bindings)]
                         end),
                     
+                    % if path is relative detect it and rewrite path
                     case mochiweb_util:safe_relative_path(Path) of
                         undefined -> 
                             ?b2l(Prefix) ++ "/" ++ Path;
@@ -63,27 +153,36 @@ handle_rewrite_req(#httpd{
                    
                 end,
 
+            % normalize final path (fix levels "." and "..")
             RawPath1 = ?b2l(iolist_to_binary(normalize_path(RawPath))),
             
+            %% get path parts, needed for CouchDB dispatching
             {"/" ++ NewPath2, _, _} = mochiweb_util:urlsplit_path(RawPath1),
             NewPathParts1 = [?l2b(couch_httpd:unquote(Part))
                             || Part <- string:tokens(NewPath2, "/")],
                             
             ?LOG_INFO("rewrite to ~p ~n", [RawPath1]),
 
+            % build a new mochiweb request
             MochiReq1 = mochiweb_request:new(MochiReq:get(socket),
                                              MochiReq:get(method),
                                              RawPath1,
                                              MochiReq:get(version),
                                              MochiReq:get(headers)),
+                                             
+            % cleanup, It force mochiweb to reparse raw uri.
             MochiReq1:cleanup(),
                         
+            % send to couchdb the rewritten request
             couch_httpd_db:handle_request(Req#httpd{
                         path_parts=NewPathParts1,
                         mochi_req=MochiReq1})
         end.
             
 
+
+%% @doc Try to find a rule matching current url. If none is found
+%% 404 error not_found is raised
 try_bind_path([], _Method, _PathParts, _QueryList) ->
     no_dispatch_path;        
 try_bind_path([Dispatch|Rest], Method, PathParts, QueryList) ->
@@ -120,6 +219,9 @@ try_bind_path([Dispatch|Rest], Method, PathParts, QueryList) ->
             try_bind_path(Rest, Method, PathParts, QueryList)
     end.
     
+%% rewriting dynamically the quey list given as query member in 
+%% rewrites. Each value is replaced by one binding or an argument
+%% passed in url.
 make_query_list([], _Bindings, Acc) ->
     Acc;
 make_query_list([{Key, {Value}}|Rest], Bindings, Acc) ->
@@ -149,6 +251,10 @@ replace_var(Value, Bindings) ->
         _ -> Value
     end.
 
+
+%% doc: build new patch from bindings. bindings are query args
+%% (+ dynamic query rewritten if needed) and bindings found in
+%% bind_path step.
 make_new_path([], _Bindings, _Remaining, Acc) ->
     lists:reverse(Acc);
 make_new_path([?MATCH_ALL], _Bindings, Remaining, Acc) ->
@@ -166,7 +272,11 @@ make_new_path([P|Rest], Bindings, Remaining, Acc) when is_atom(P) ->
 make_new_path([P|Rest], Bindings, Remaining, Acc) ->
     make_new_path(Rest, Bindings, Remaining, [P|Acc]).
             
-    
+
+%% @doc If method of the query fith the rule method. If the 
+%% method rule is '*', which is the default, all
+%% request method will bind. It allows us to make rules
+%% depending on HTTP method.
 bind_method(?MATCH_ALL, _Method) ->
     true;
 bind_method(Method, Method) ->
@@ -174,6 +284,9 @@ bind_method(Method, Method) ->
 bind_method(_, _) ->
     false. 
 
+
+%% @doc bind path. Using the rule from we try to bind variables given
+%% to the current url by pattern matching
 bind_path([], [], Bindings) ->
     {ok, [], Bindings};
 bind_path([?MATCH_ALL], Rest, Bindings) when is_list(Rest) ->
@@ -189,7 +302,6 @@ bind_path(_, _, _) ->
     
 
 %% normalize path.
-
 normalize_path(Path)  ->
     "/" ++ string:join(normalize_path1(string:tokens(Path, 
                 "/"), []), [?SEPARATOR]).
@@ -209,7 +321,8 @@ normalize_path1(["."|Rest], Acc) ->
 normalize_path1([Path|Rest], Acc) ->
     normalize_path1(Rest, [Path|Acc]).
 
-    
+ 
+%% @doc transform json rule in erlang for pattern matching   
 make_rule(Rule) ->
     Method = case proplists:get_value(<<"method">>, Rule) of
         undefined -> '*';
@@ -236,7 +349,9 @@ parse_path(Path) ->
     {ok, SlashRE} = re:compile(<<"\\/">>),
     path_to_list(re:split(Path, SlashRE), []).
     
-
+%% @doc convert a path rule (from or to) to an erlang list
+%% * and path variable starting by ":" are converted
+%% in erlang atom.
 path_to_list([], Acc) ->
     lists:reverse(Acc);
 path_to_list([<<>>|R], Acc) ->
@@ -250,6 +365,8 @@ path_to_list([P|R], Acc) ->
         _ -> P
     end,
     path_to_list(R, [P1|Acc]).
+
+
 
 encode_query(Props) ->
     RevPairs = lists:foldl(fun ({K, V}, Acc) ->
