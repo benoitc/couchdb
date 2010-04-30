@@ -112,7 +112,8 @@
 handle_rewrite_req(#httpd{
         path_parts=[DbName, <<"_design">>, DesignName, _Rewrite|PathParts],
         method=Method,
-        mochi_req=MochiReq}=Req, _Db, DDoc) ->
+        mochi_req=MochiReq,
+        user_ctx=UserCtx}=Req, _Db, DDoc) ->
 
     % we are in a design handler
     DesignId = <<"_design/", DesignName/binary>>,
@@ -133,7 +134,7 @@ handle_rewrite_req(#httpd{
 
             %% get raw path by matching url to a rule.
             RawPath = case try_bind_path(DispatchList, couch_util:to_binary(Method), PathParts,
-                                    QueryList1) of
+                                    QueryList, UserCtx) of
                 no_dispatch_path ->
                     throw(not_found);
                 {NewPathParts, Bindings} ->
@@ -190,14 +191,16 @@ quote_plus(X) ->
 
 %% @doc Try to find a rule matching current url. If none is found
 %% 404 error not_found is raised
-try_bind_path([], _Method, _PathParts, _QueryList) ->
+try_bind_path([], _Method, _PathParts, _QueryList, _UserCtx) ->
     no_dispatch_path;
-try_bind_path([Dispatch|Rest], Method, PathParts, QueryList) ->
-    [{PathParts1, Method1}, RedirectPath, QueryArgs] = Dispatch,
+try_bind_path([Dispatch|Rest], Method, PathParts, QueryList, UserCtx) ->
+    [{PathParts1, Method1}, RedirectPath, QueryArgs, Roles] = Dispatch,
+    
     case bind_method(Method1, Method) of
         true ->
             case bind_path(PathParts1, PathParts, []) of
                 {ok, Remaining, Bindings} ->
+                    ok = check_roles(Roles, UserCtx),
                     Bindings1 = Bindings ++ QueryList,
                     % we parse query args from the rule and fill
                     % it eventually with bindings vars
@@ -218,10 +221,24 @@ try_bind_path([Dispatch|Rest], Method, PathParts, QueryList) ->
                                     Remaining, []),
                     {NewPathParts, FinalBindings};
                 fail ->
-                    try_bind_path(Rest, Method, PathParts, QueryList)
+                    try_bind_path(Rest, Method, PathParts, QueryList, UserCtx)
             end;
         false ->
-            try_bind_path(Rest, Method, PathParts, QueryList)
+            try_bind_path(Rest, Method, PathParts, QueryList, UserCtx)
+    end.
+    
+%% check if user is allowed to this rule
+check_roles(RRoles, #user_ctx{roles=Roles, name=Name}=_UserCtx) ->
+    case RRoles of
+        [] -> ok;
+        _ ->
+            case RRoles -- Roles of
+                RRoles ->
+                     ?LOG_DEBUG("user name ~p can't access to this uri", [Name]),
+                     throw({unauthorized, <<"You are not authorized to access this uri.">>});
+                _ ->
+                    ok
+            end
     end.
 
 %% rewriting dynamically the quey list given as query member in
@@ -369,7 +386,11 @@ make_rule(Rule) ->
         To ->
             parse_path(To)
         end,
-    [{FromParts, Method}, ToParts, QueryArgs].
+    Roles = case proplists:get_value(<<"roles">>, Rule) of
+        undefined -> [];
+        Roles1 -> Roles1
+    end,
+    [{FromParts, Method}, ToParts, QueryArgs, Roles].
 
 parse_path(Path) ->
     {ok, SlashRE} = re:compile(<<"\\/">>),
