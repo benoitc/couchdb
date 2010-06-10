@@ -10,55 +10,73 @@
 ## License for the specific language governing permissions and limitations under
 ## the License.
 
-mochiwebebindir = $(localerlanglibdir)/mochiweb-r113/ebin
+mochiwebebindir = $(localerlanglibdir)/mochiweb-r167/ebin
 
 mochiweb_file_collection = \
+    mochiweb.app.in \
     mochifmt.erl \
     mochifmt_records.erl \
     mochifmt_std.erl \
+    mochiglobal.erl \
     mochihex.erl \
     mochijson.erl \
     mochijson2.erl \
+    mochilists.erl \
     mochinum.erl \
-	mochiweb.app.in \
+    mochitemp.erl \
+    mochiutf8.erl \
     mochiweb.erl \
+    mochiweb_acceptor.erl \
     mochiweb_app.erl \
     mochiweb_charref.erl \
     mochiweb_cookies.erl \
+    mochiweb_cover.erl \
     mochiweb_echo.erl \
     mochiweb_headers.erl \
     mochiweb_html.erl \
     mochiweb_http.erl \
+    mochiweb_io.erl \
+    mochiweb_mime.erl \
     mochiweb_multipart.erl \
     mochiweb_request.erl \
     mochiweb_response.erl \
     mochiweb_skel.erl \
+    mochiweb_socket.erl \
     mochiweb_socket_server.erl \
     mochiweb_sup.erl \
     mochiweb_util.erl \
     reloader.erl
 
 mochiwebebin_make_generated_file_list = \
+    mochiweb.app \
     mochifmt.beam \
     mochifmt_records.beam \
     mochifmt_std.beam \
+    mochiglobal.beam \
     mochihex.beam \
     mochijson.beam \
     mochijson2.beam \
+    mochilists.beam \
     mochinum.beam \
-	mochiweb.app \
+    mochitemp.beam \
+    mochiutf8.beam \
     mochiweb.beam \
+    mochiweb_acceptor.beam \
     mochiweb_app.beam \
     mochiweb_charref.beam \
     mochiweb_cookies.beam \
+    mochiweb_cover.beam \
     mochiweb_echo.beam \
     mochiweb_headers.beam \
     mochiweb_html.beam \
     mochiweb_http.beam \
+    mochiweb_io.beam \
+    mochiweb_mime.beam \
     mochiweb_multipart.beam \
     mochiweb_request.beam \
     mochiweb_response.beam \
     mochiweb_skel.beam \
+    mochiweb_socket.beam \
     mochiweb_socket_server.beam \
     mochiweb_sup.beam \
     mochiweb_util.beam \
@@ -68,7 +86,8 @@ mochiwebebin_DATA = \
     $(mochiwebebin_make_generated_file_list)
 
 EXTRA_DIST =  \
-    $(mochiweb_file_collection)
+    $(mochiweb_file_collection) \
+    internal.hrl
 
 CLEANFILES = \
     $(mochiwebebin_make_generated_file_list)

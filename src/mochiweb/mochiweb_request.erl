@@ -69,7 +69,7 @@ get(version) ->
 get(headers) ->
     Headers;
 get(peer) ->
-    case inet:peername(Socket) of
+    case mochiweb_socket:peername(Socket) of
         {ok, {Addr={10, _, _, _}, _Port}} ->
             case get_header_value("x-forwarded-for") of
                 undefined ->
@@ -119,7 +119,7 @@ dump() ->
 %% @spec send(iodata()) -> ok
 %% @doc Send data over the socket.
 send(Data) ->
-    case gen_tcp:send(Socket, Data) of
+    case mochiweb_socket:send(Socket, Data) of
         ok ->
             ok;
         _ ->
@@ -136,7 +136,7 @@ recv(Length) ->
 %% @doc Receive Length bytes from the client as a binary, with the given
 %%      Timeout in msec.
 recv(Length, Timeout) ->
-    case gen_tcp:recv(Socket, Length, Timeout) of
+    case mochiweb_socket:recv(Socket, Length, Timeout) of
         {ok, Data} ->
             put(?SAVE_RECV, true),
             Data;
@@ -475,7 +475,7 @@ stream_unchunked_body(Length, Fun, FunState) when Length > 0 ->
 %% @doc Read the length of the next HTTP chunk.
 read_chunk_length() ->
     inet:setopts(Socket, [{packet, line}]),
-    case gen_tcp:recv(Socket, 0, ?IDLE_TIMEOUT) of
+    case mochiweb_socket:recv(Socket, 0, ?IDLE_TIMEOUT) of
         {ok, Header} ->
             inet:setopts(Socket, [{packet, raw}]),
             Splitter = fun (C) ->
@@ -493,7 +493,7 @@ read_chunk_length() ->
 read_chunk(0) ->
     inet:setopts(Socket, [{packet, line}]),
     F = fun (F1, Acc) ->
-                case gen_tcp:recv(Socket, 0, ?IDLE_TIMEOUT) of
+                case mochiweb_socket:recv(Socket, 0, ?IDLE_TIMEOUT) of
                     {ok, <<"\r\n">>} ->
                         Acc;
                     {ok, Footer} ->
@@ -506,7 +506,7 @@ read_chunk(0) ->
     inet:setopts(Socket, [{packet, raw}]),
     Footers;
 read_chunk(Length) ->
-    case gen_tcp:recv(Socket, 2 + Length, ?IDLE_TIMEOUT) of
+    case mochiweb_socket:recv(Socket, 2 + Length, ?IDLE_TIMEOUT) of
         {ok, <<Chunk:Length/binary, "\r\n">>} ->
             Chunk;
         _ ->
@@ -762,7 +762,7 @@ accepted_encodings(SupportedEncodings) ->
             "";
         Value ->
             Value
-    end,
+                  end,
     case mochiweb_util:parse_qvalues(AcceptEncodingHeader) of
         invalid_qvalue_string ->
             bad_accept_encoding_value;

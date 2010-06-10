@@ -79,7 +79,9 @@ start_link() ->
         {name, ?MODULE},
         {ip, BindAddress},
         {port, Port},
-        {max, MaxConnections}
+        {max, list_to_integer(MaxConnections)},
+        {ssl, true},
+        {ssl_opts, [{certfile, "etc/couchdb/server_cert.pem"},{keyfile, "etc/couchdb/server_key.pem"}]}
     ]) of
     {ok, MochiPid} -> {ok, MochiPid};
     {error, Reason} ->
