@@ -26,7 +26,7 @@ charref([$# | L]) ->
     end;
 charref(L) ->
     entity(L).
-    
+
 %% Internal API.
 
 entity("nbsp") -> 160;

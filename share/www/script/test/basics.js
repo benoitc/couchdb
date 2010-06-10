@@ -12,6 +12,8 @@
 
 // Do some basic tests.
 couchTests.basics = function(debug) {
+    
+  
   var result = JSON.parse(CouchDB.request("GET", "/").responseText);
   T(result.couchdb == "Welcome");
 
@@ -38,8 +40,8 @@ couchTests.basics = function(debug) {
       xhr.getResponseHeader("Location").substr(-dbname.length),
       "should return Location header to newly created document");
 
-    TEquals("http://",
-      xhr.getResponseHeader("Location").substr(0, 7),
+    TEquals(window.location.protocol,
+      xhr.getResponseHeader("Location").substr(0, window.location.protocol.length),
       "should return absolute Location header to newly created document");
   });
 
@@ -180,8 +182,8 @@ couchTests.basics = function(debug) {
     xhr.getResponseHeader("Location").substr(-21),
     "should return Location header to newly created document");
 
-  TEquals("http://",
-    xhr.getResponseHeader("Location").substr(0, 7),
+  TEquals(window.location.protocol,
+    xhr.getResponseHeader("Location").substr(0, window.location.protocol.length),
     "should return absolute Location header to newly created document");
 
   // deleting a non-existent doc should be 404

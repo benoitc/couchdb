@@ -382,6 +382,7 @@ absolute_uri(#httpd{mochi_req=MochiReq}, Path) ->
             end;
         Value -> Value
     end,
+    
     XSsl = couch_config:get("httpd", "x_forwarded_ssl", "X-Forwarded-Ssl"),
     Scheme = case MochiReq:get_header_value(XSsl) of
         "on" -> "https";
@@ -390,7 +391,11 @@ absolute_uri(#httpd{mochi_req=MochiReq}, Path) ->
             case MochiReq:get_header_value(XProto) of
                 % Restrict to "https" and "http" schemes only
                 "https" -> "https";
-                _ -> "http"
+                _ ->
+                    case MochiReq:get(scheme) of
+                        https -> "https";
+                        _ -> "http"
+                    end
             end
     end,
     Scheme ++ "://" ++ Host ++ Path.

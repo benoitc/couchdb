@@ -32,6 +32,7 @@ mochiweb_file_collection = \
     mochiweb_cookies.erl \
     mochiweb_cover.erl \
     mochiweb_echo.erl \
+    mochilogfile2.erl \
     mochiweb_headers.erl \
     mochiweb_html.erl \
     mochiweb_http.erl \
@@ -67,6 +68,7 @@ mochiwebebin_make_generated_file_list = \
     mochiweb_cookies.beam \
     mochiweb_cover.beam \
     mochiweb_echo.beam \
+    mochilogfile2.beam \
     mochiweb_headers.beam \
     mochiweb_html.beam \
     mochiweb_http.beam \
