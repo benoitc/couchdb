@@ -48,6 +48,8 @@ start_apps([App|Rest]) ->
        start_apps(Rest);
     {error, {already_started, App}} ->
        start_apps(Rest);
+    {error, _Reason} when App =:= public_key ->
+       start_apps(Rest);
     {error, _Reason} ->
        {error, {app_would_not_start, App}}
     end.
