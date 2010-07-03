@@ -290,6 +290,7 @@
     heartbeat,
     timeout,
     filter = "",
-    include_docs = false
+    include_docs = false,
+    db_open_options = []
 }).
 
