@@ -51,17 +51,36 @@
             var dbsOnPage = dbs.slice(offset, offset + maxPerPage);
 
             $.each(dbsOnPage, function(idx, dbName) {
-              $("#databases tbody.content").append("<tr>" +
-                "<th><a href='database.html?" + encodeURIComponent(dbName) + "'>" +
-                  dbName + "</a></th>" +
-                "<td class='size'></td><td class='count'></td>" +
-                "<td class='seq'></td></tr>");
+               /*$("#databases tbody.content").append("<tr>" +
+                  "<th><a href='database.html?" + encodeURIComponent(dbName) + "'>" +
+                    dbName + "</a></th>" +
+                  "<td class='size'></td><td class='count'></td>" +
+                  "<td class='seq'></td></tr>");*/
+                  
               $.couch.db(dbName).info({
                 success: function(info) {
-                  $("#databases tbody.content tr:eq(" + idx + ")")
+                  
+                  var tr = $("<tr><th><a href='database.html?" + encodeURIComponent(dbName) + "'>" +
+                    dbName + "</a></th>" +
+                  "<td class='size'></td><td class='count'></td>" +
+                  "<td class='seq'></td></tr>")
+                  .find("td.size").text($.futon.formatSize(info.disk_size)).end()
+                  .find("td.count").text(info.doc_count).end()
+                  .find("td.seq").text(info.update_seq).end()
+                  
+                  tr.appendTo("#databases tbody.content");
+                  
+                 
+                    
+                  /*$("#databases tbody.content tr:eq(" + idx + ")")
                     .find("td.size").text($.futon.formatSize(info.disk_size)).end()
                     .find("td.count").text(info.doc_count).end()
-                    .find("td.seq").text(info.update_seq);
+                    .find("td.seq").text(info.update_seq);*/
+                },
+                error: function(s, e, r) {
+                  if (s != 401) {
+                    alert("Error: " + r);
+                  }
                 }
               });
             });

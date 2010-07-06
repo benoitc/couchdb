@@ -806,6 +806,12 @@ ensure_rep_db_exists() ->
     _Error ->
         {ok, Db} = couch_db:create(DbName, Opts)
     end,
+
+    SecObj = {[
+        {<<"readers">>, {[{<<"roles">>, [<<"_admin">>, <<"_replicator">>]}]}}
+    ]},
+    ok = couch_db:set_security(Db, SecObj),
+            
     ok = ensure_rep_ddoc_exists(Db, <<"_design/_replicator">>),
     {ok, Db}.
 

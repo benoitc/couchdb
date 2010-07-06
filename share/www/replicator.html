@@ -24,8 +24,13 @@ specific language governing permissions and limitations under the License.
     <script src="script/jquery.couch.js?0.11.0"></script>
     <script src="script/jquery.dialog.js?0.11.0"></script>
     <script src="script/futon.js?0.11.0"></script>
+    <script src="script/futon.format.js?0.11.0"></script>
+    <script src="script/futon.replicator.js?0.11.0"></script>
     <script>
       $(document).ready(function() {
+        
+        new $.futon.CouchReplicatorPage();
+        
         $("fieldset input[type=radio]").click(function() {
           var radio = this;
           var fieldset = $(this).parents("fieldset").get(0);
@@ -73,6 +78,20 @@ specific language governing permissions and limitations under the License.
           $("#replicate").get(0).focus();
           return false;
         });
+        
+        
+        $.couch.config({
+          success: function(dbname) {
+            var db = $.couch.db(dbname);
+            db.changes(1).onChange(function(change) {
+              
+              
+            });
+            
+            
+          }
+          
+        },"replicator", "db");
 
         $("button#replicate").click(function() {
           $("#records tbody.content").empty();
@@ -82,12 +101,14 @@ specific language governing permissions and limitations under the License.
           if ($("#continuous")[0].checked) {
             repOpts.continuous = true;
           }
+          
+          
           $.couch.replicate(source, target, {
             success: function(resp) {
-              if (resp._local_id) {
+              if (resp.id) {
                 $("<tr><th></th></tr>")
                   .find("th").text(JSON.stringify(resp)).end()
-                  .appendTo("#records tbody.content");
+                  .appendTo("#events tbody.content");
                 $("#records tbody tr").removeClass("odd").filter(":odd").addClass("odd");
               } else {
                 $.each(resp.history, function(idx, record) {
@@ -139,8 +160,8 @@ specific language governing permissions and limitations under the License.
         </p>
       </form>
 
-      <table id="records" class="listing" cellspacing="0">
-        <caption>Replication History</caption>
+      <table id="events" class="listing" cellspacing="0">
+        <caption>Replication Events</caption>
         <thead><tr>
           <th>Event</th>
         </tr></thead>
@@ -149,7 +170,38 @@ specific language governing permissions and limitations under the License.
           <td colspan="4">No replication</td>
         </tr></tbody>
       </table>
-
+      
+      <h2>Replication Tasks</h2>
+      <table id="records" class="listing" cellspacing="0">
+        <caption>Replication History</caption>
+        <thead>
+          <tr>
+            <th>Id</th>
+            <th>Replication Id</th>
+            <th>State</th>
+            <th>Source</th>
+            <th>Target</th>
+          </th>
+        </thead>
+        <tbody class="content"></tbody>
+        <tbody class="footer">
+          <tr>
+            <td colspan="5">
+              <div id="paging">
+                <a class="prev">← Previous Page</a> |
+                <label>Rows per page: <select id="perpage">
+                  <option selected>10</option>
+                  <option>25</option>
+                  <option>50</option>
+                  <option>100</option>
+                </select></label> |
+                <a class="next">Next Page →</a>
+              </div>
+              <span></span>
+            </td>
+          </tr>
+        </tbody>
+        
     </div>
   </div></body>
 </html>
