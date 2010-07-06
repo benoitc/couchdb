@@ -89,23 +89,9 @@ handle_replicator_req(#httpd{method='POST'}=Req) ->
         {ok, _} = couch_db:update_doc(RepDb, Doc2, []),
         DocId1 = Doc2#doc.id,
         {202, {[{ok, true}, {<<"id">>, DocId1}]}};
-        
     DocId ->
-        #doc{body={Props}} = Doc,
-        case couch_util:get_value(<<"cancel">>, Props, false) of
-        true ->
-            case couch_db:open_doc(RepDb, DocId, []) of
-            {ok, Doc1} -> 
-            
-                {ok, _} = couch_db:update_doc(RepDb, Doc1#doc{deleted=true}, []),
-                {202, {[{ok, true}, {<<"id">>, DocId}]}};
-            _ ->
-                {404, {[{error, not_found}]}}
-            end;
-        _ -> 
-            {ok, _} = couch_db:update_doc(RepDb, Doc, []),
-            202, {[{ok, true}, {<<"id">>, DocId}]}
-        end
+        {ok, _} = couch_db:update_doc(RepDb, Doc, []),
+        {202, {[{ok, true}, {<<"id">>, DocId}]}}
     end,
     couch_db:close(RepDb),
     send_json(Req, Status, Msg);

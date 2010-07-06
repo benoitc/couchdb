@@ -16,9 +16,9 @@
     
         
     CouchReplicatorPage: function() {
-      var self = this;
+      var page = this;
            
-      this.updateDocumentListing = function(db, options) {
+      this.updateRecordsListing = function(db, options) {
         
         var db = db;
         if (options === undefined) options = {};
@@ -32,6 +32,7 @@
         }
         
         options.include_docs = true;
+        
         
         if ($("#records thead th.key").is(".desc")) {
           if (typeof options.descending == 'undefined') options.descending = true;
@@ -72,7 +73,7 @@
                 }
                 opt.skip = 1;
               }
-              page.updateDocumentListing(opt);
+              page.updateRecordsListing(db, opt);
               return false;
             });
           } else {
@@ -95,7 +96,7 @@
                 }
                 opt.skip = 1;
               }
-              page.updateDocumentListing(opt);
+              page.updateRecordsListing(db, opt);
               return false;
             });
           } else {
@@ -111,17 +112,6 @@
               key = $.futon.formatJSON(row.key, {indent: 0, linesep: ""});
             }
             var doc = row.value;
-            
-            var removeDoc = function(d) {
-              
-              
-              var docid = d._id;
-              
-              alert(docid)
-              //db.removeDoc()
-              
-              
-            }
             
             if (doc.replication_id) {
               $("<td class='key'><a href='document.html?" + encodeURIComponent(db.name) +
@@ -197,7 +187,7 @@
           $("#records tbody.footer td span").text(
             "Showing " + firstNum + "-" + lastNum + " of " + totalNum +
             " row" + (firstNum != lastNum || totalNum == "unknown" ? "s" : ""));
-          $("#reclrds tbody tr:odd").addClass("odd");
+          $("#records tbody tr:odd").addClass("odd");
         }
         options.error = function(status, error, reason) {
           alert("Error: " + error + "\n\n" + reason);
@@ -211,9 +201,12 @@
         success: function(dbname) {
           var db = $.couch.db(dbname);
           
-          self.updateDocumentListing(db);
+          page.updateRecordsListing(db);
           
-          
+           $("#perpage").change(function() {
+              page.updateRecordsListing(db);
+              $.futon.storage.set("per_page", this.value);
+            });
           
         }
         

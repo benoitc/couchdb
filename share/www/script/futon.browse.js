@@ -66,9 +66,9 @@
                   tr.appendTo("#databases tbody.content");
 
                 },
-                error: function(s, e, r) {
-                  if (s != 401) {
-                    alert("Error: " + r);
+                error: function(status, error, reason) {
+                  if (status != 401) {
+                    alert("Error: " + error + "\n\n" + reason);
                   }
                 }
               });

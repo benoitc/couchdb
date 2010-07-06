@@ -29,7 +29,7 @@ specific language governing permissions and limitations under the License.
     <script>
       $(document).ready(function() {
         
-        new $.futon.CouchReplicatorPage();
+        var page = new $.futon.CouchReplicatorPage();
         
         $("fieldset input[type=radio]").click(function() {
           var radio = this;
@@ -100,7 +100,11 @@ specific language governing permissions and limitations under the License.
             }             
           }, repOpts);
         });
+        
+        
       });
+      
+     
     </script>
   </head>
   <body><div id="wrap">
