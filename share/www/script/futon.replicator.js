@@ -196,17 +196,24 @@
         db.view("_replicator/futon", options);
       }
       
-      
+     
       $.couch.config({
         success: function(dbname) {
           var db = $.couch.db(dbname);
-          
           page.updateRecordsListing(db);
-          
-           $("#perpage").change(function() {
+          $("#perpage").change(function() {
               page.updateRecordsListing(db);
               $.futon.storage.set("per_page", this.value);
-            });
+          });
+            
+          db.info({
+            success: function(info) {
+              db.changes(info.update_seq).onChange(function() {
+                page.updateRecordsListing(db);
+              });
+            }
+          });
+          
           
         }
         

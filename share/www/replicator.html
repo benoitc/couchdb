@@ -97,9 +97,12 @@ specific language governing permissions and limitations under the License.
                   .find("th").text(JSON.stringify(resp)).end()
                   .appendTo("#events tbody.content");
                 $("#events tbody tr").removeClass("odd").filter(":odd").addClass("odd");
+                
             }             
           }, repOpts);
         });
+        
+        $("#perpage").val($.futon.storage.get("per_page"));
         
         
       });
