@@ -15,7 +15,7 @@
 -export([handle_welcome_req/2,handle_favicon_req/2,handle_utils_dir_req/2,
     handle_all_dbs_req/1,handle_replicate_req/1,handle_restart_req/1,
     handle_uuids_req/1,handle_config_req/1,handle_log_req/1,
-    handle_task_status_req/1]).
+    handle_task_status_req/1, handle_replicator_req/1]).
 
 -export([increment_update_seq_req/2]).
 
@@ -77,6 +77,42 @@ handle_task_status_req(#httpd{method='GET'}=Req) ->
     send_json(Req, [{Props} || Props <- couch_task_status:all()]);
 handle_task_status_req(Req) ->
     send_method_not_allowed(Req, "GET,HEAD").
+
+
+handle_replicator_req(#httpd{method='POST'}=Req) ->
+    {ok, RepDb} = couch_rep:ensure_rep_db_exists(),
+
+    Doc = couch_doc:from_json_obj(couch_httpd:json_body(Req)),
+    {Status, Msg} = case Doc#doc.id of
+    <<"">> ->
+        Doc2 = Doc#doc{id=couch_uuids:new(), revs={0, []}},
+        {ok, _} = couch_db:update_doc(RepDb, Doc2, []),
+        DocId1 = Doc2#doc.id,
+        {200, {[{ok, true}, {<<"id">>, DocId1}]}};
+        
+    DocId ->
+        #doc{body={Props}} = Doc,
+        case couch_util:get_value(<<"cancel">>, Props, false) of
+        true ->
+            case couch_db:open_doc(RepDb, DocId, []) of
+            {ok, Doc1} -> 
+            
+                {ok, _} = couch_db:update_doc(RepDb, Doc1#doc{deleted=true}, []),
+                {200, {[{ok, true}, {<<"id">>, DocId}]}};
+            _ ->
+                {404, {[{error, not_found}]}}
+            end;
+        _ -> 
+            {ok, _} = couch_db:update_doc(RepDb, Doc, []),
+            200, {[{ok, true}, {<<"id">>, DocId}]}
+        end
+    end,
+    couch_db:close(RepDb),
+    send_json(Req, Status, Msg);
+    
+handle_replicator_req(Req) ->
+    send_method_not_allowed(Req, "POST").
+     
 
 handle_replicate_req(#httpd{method='POST'}=Req) ->
     PostBody = couch_httpd:json_body_obj(Req),

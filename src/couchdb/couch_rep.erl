@@ -18,7 +18,7 @@
 -export([replicate/2, checkpoint/1]).
 -export([ensure_rep_db_exists/0, make_replication_id/2]).
 -export([start_replication/3, end_replication/1]).
--export([update_rep_doc/2]).
+-export([update_rep_doc/2, update_rep_doc/3]).
 
 -include("couch_db.hrl").
 -include("couch_js_functions.hrl").

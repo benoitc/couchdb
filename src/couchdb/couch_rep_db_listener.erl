@@ -257,6 +257,7 @@ maybe_stop_replication({RepProps}) ->
     DocId = couch_util:get_value(<<"_id">>, RepProps),
     case ets:lookup(?DOC_TO_REP_ID_MAP, DocId) of
     [{DocId, RepId}] ->
+        ?LOG_DEBUG("Stop replication ~p from ~p", [RepId, DocId]),
         couch_rep:end_replication(RepId),
         true = ets:delete(?REP_ID_TO_DOC_ID_MAP, RepId),
         true = ets:delete(?DOC_TO_REP_ID_MAP, DocId);
