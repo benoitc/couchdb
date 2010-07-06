@@ -823,7 +823,8 @@ ensure_rep_ddoc_exists(RepDb, DDocID) ->
         DDoc = couch_doc:from_json_obj({[
             {<<"_id">>, DDocID},
             {<<"language">>, <<"javascript">>},
-            {<<"validate_doc_update">>, ?REP_DB_DOC_VALIDATE_FUN}
+            {<<"validate_doc_update">>, ?REP_DB_DOC_VALIDATE_FUN},
+            {<<"views">>, ?REP_DB_DOC_VIEWS}
         ]}),
         {ok, _Rev} = couch_db:update_doc(RepDb, DDoc, [])
     end,

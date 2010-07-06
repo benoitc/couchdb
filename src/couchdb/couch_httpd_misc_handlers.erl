@@ -88,7 +88,7 @@ handle_replicator_req(#httpd{method='POST'}=Req) ->
         Doc2 = Doc#doc{id=couch_uuids:new(), revs={0, []}},
         {ok, _} = couch_db:update_doc(RepDb, Doc2, []),
         DocId1 = Doc2#doc.id,
-        {200, {[{ok, true}, {<<"id">>, DocId1}]}};
+        {202, {[{ok, true}, {<<"id">>, DocId1}]}};
         
     DocId ->
         #doc{body={Props}} = Doc,
@@ -98,13 +98,13 @@ handle_replicator_req(#httpd{method='POST'}=Req) ->
             {ok, Doc1} -> 
             
                 {ok, _} = couch_db:update_doc(RepDb, Doc1#doc{deleted=true}, []),
-                {200, {[{ok, true}, {<<"id">>, DocId}]}};
+                {202, {[{ok, true}, {<<"id">>, DocId}]}};
             _ ->
                 {404, {[{error, not_found}]}}
             end;
         _ -> 
             {ok, _} = couch_db:update_doc(RepDb, Doc, []),
-            200, {[{ok, true}, {<<"id">>, DocId}]}
+            202, {[{ok, true}, {<<"id">>, DocId}]}
         end
     end,
     couch_db:close(RepDb),

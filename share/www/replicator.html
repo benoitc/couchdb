@@ -79,47 +79,25 @@ specific language governing permissions and limitations under the License.
           return false;
         });
         
-        
-        $.couch.config({
-          success: function(dbname) {
-            var db = $.couch.db(dbname);
-            db.changes(1).onChange(function(change) {
-              
-              
-            });
-            
-            
-          }
-          
-        },"replicator", "db");
 
         $("button#replicate").click(function() {
-          $("#records tbody.content").empty();
+          
+          $("#events tbody.content").empty();
           var source = $("#from_local")[0].checked ? $("#from_name").val() : $("#from_url").val();
           var target = $("#to_local")[0].checked ? $("#to_name").val() : $("#to_url").val();
           var repOpts = {};
+          
           if ($("#continuous")[0].checked) {
             repOpts.continuous = true;
           }
-          
-          
+
           $.couch.replicate(source, target, {
             success: function(resp) {
-              if (resp.id) {
                 $("<tr><th></th></tr>")
                   .find("th").text(JSON.stringify(resp)).end()
                   .appendTo("#events tbody.content");
-                $("#records tbody tr").removeClass("odd").filter(":odd").addClass("odd");
-              } else {
-                $.each(resp.history, function(idx, record) {
-                  $("<tr><th></th></tr>")
-                    .find("th").text(JSON.stringify(record)).end()
-                    .appendTo("#records tbody.content");
-                });
-                $("#records tbody tr").removeClass("odd").filter(":odd").addClass("odd");
-                $("#records tbody.footer td").text("Replication session " + resp.session_id);
-              }
-            }
+                $("#events tbody tr").removeClass("odd").filter(":odd").addClass("odd");
+            }             
           }, repOpts);
         });
       });
@@ -181,12 +159,13 @@ specific language governing permissions and limitations under the License.
             <th>State</th>
             <th>Source</th>
             <th>Target</th>
+            <th></th>
           </th>
         </thead>
         <tbody class="content"></tbody>
         <tbody class="footer">
           <tr>
-            <td colspan="5">
+            <td colspan="6">
               <div id="paging">
                 <a class="prev">← Previous Page</a> |
                 <label>Rows per page: <select id="perpage">

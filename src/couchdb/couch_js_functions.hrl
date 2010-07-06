@@ -168,3 +168,24 @@
         }
     }
 ">>).
+
+-define(REP_DB_DOC_VIEWS, {[
+    {<<"futon">>, {[
+       {<<"map">>, <<"
+            function(doc) {
+                function format_credentials(url) {
+                    var matches = url.match(/http:\\/\\/([^:].*):([^@].*)@(.*)$/);
+                    if (!matches) return url;
+                    return 'http://***:***@' + matches[3];
+                }
+                    
+                if (doc.source && doc.target) {   
+                    doc.source = format_credentials(doc.source);
+                    doc.target = format_credentials(doc.target);
+                    emit(doc._id, doc);
+                }
+            }
+        ">>}
+    ]}}
+
+]}).

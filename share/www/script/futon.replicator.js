@@ -104,14 +104,24 @@
 
           for (var i = 0; i < Math.min(perPage, resp.rows.length); i++) {
             var row = resp.rows[i];
-            var tr = $("<tr></tr>");
+            var tr = $("<tr id='"+ $.couch.encodeDocId(row.id) + "'></tr>");
             
             var key = "null";
             if (row.key !== null) {
               key = $.futon.formatJSON(row.key, {indent: 0, linesep: ""});
             }
-            var doc = row.doc;
+            var doc = row.value;
             
+            var removeDoc = function(d) {
+              
+              
+              var docid = d._id;
+              
+              alert(docid)
+              //db.removeDoc()
+              
+              
+            }
             
             if (doc.replication_id) {
               $("<td class='key'><a href='document.html?" + encodeURIComponent(db.name) +
@@ -121,9 +131,16 @@
               $("<td class='repid'><div></div></td>").find("div")
               .html(doc.replication_id).end()
               .appendTo(tr);
-              $("<td class='state'><div></div></td>").find("div")
-              .html(doc.state).end()
-              .appendTo(tr);
+              
+              if (doc.state) {
+                $("<td class='state'><div></div></td>").find("div")
+                .html(doc.state).end()
+                .appendTo(tr);
+              } else {
+                $("<td class='state'></td>").appendTo(tr);
+              }
+              
+                
                 
               $("<td class='source'><div></div></td>").find("div")
               .html(doc.source).end()
@@ -133,10 +150,34 @@
                 .html(doc.target).end()
                 .appendTo(tr);
               
+              $('<td><div style="text-align:center;"">' +
+              '<a class="remove" href="#remove">x</a></div></td>')
+              .appendTo(tr);
+              
             }
-            
+
+            tr.find(".remove").click(function(e) {
+              e.preventDefault();
+              var line = $(this).parent().parent().parent();
+              var docid = line.attr("id");
+              db.openDoc(docid, {
+                success: function(doc) {
+                  db.removeDoc(doc, {
+                    success: function() {
+                      line.remove();
+                    }
+                  });
+                }
+              });
+              return false;
+            })
+
             tr.appendTo("#records tbody.content");
+
+            
           }
+          
+          
           var firstNum = 1;
           var lastNum = totalNum = Math.min(perPage, resp.rows.length);
           if (resp.total_rows != null) {
@@ -162,7 +203,7 @@
           alert("Error: " + error + "\n\n" + reason);
         }
 
-        db.allDocs(options);
+        db.view("_replicator/futon", options);
       }
       
       
@@ -172,13 +213,6 @@
           
           self.updateDocumentListing(db);
           
-          
-          db.changes(1).onChange(function(change) {
-            
-            
-            
-            
-          });
           
           
         }
