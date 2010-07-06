@@ -563,9 +563,7 @@
 
     replicate: function(source, target, ajaxOptions, repOpts) {
       repOpts = $.extend({source: source, target: target}, repOpts);
-      if (repOpts.continuous) {
-        ajaxOptions.successStatus = 202;
-      }
+      ajaxOptions.successStatus = 202;
       ajax({
           type: "POST", url: this.urlPrefix + "/_replicate",
           data: JSON.stringify(repOpts),
