@@ -27,6 +27,7 @@ AC_ENABLE_SHARED
 AC_DISABLE_STATIC
 
 AC_PROG_CC
+AC_PROG_CXX
 AC_PROG_LIBTOOL
 AC_PROG_LN_S
 
@@ -55,6 +56,8 @@ AC_ARG_WITH([erlang], [AC_HELP_STRING([--with-erlang=PATH],
     ERLANG_FLAGS="$ERLANG_FLAGS -I/usr/local/lib/erlang/usr/include"
     ERLANG_FLAGS="$ERLANG_FLAGS -I/opt/local/lib/erlang/usr/include"
 ])
+
+
 
 AC_ARG_WITH([js-include], [AC_HELP_STRING([--with-js-include=PATH],
     [set PATH to the SpiderMonkey include directory])], [
@@ -86,9 +89,33 @@ AC_ARG_VAR([FLAGS], [general flags to prepend to LDFLAGS and CPPFLAGS])
 LIB_FLAGS="$JS_LIB_FLAGS -L/usr/local/lib -L/opt/local/lib"
 LIBS="$LIB_FLAGS $LIBS"
 
+dnl ------------------------------------------------------------------
+dnl ZeroMQ
+dnl ------------------------------------------------------------------
+
+AC_ARG_WITH([zeromq], 
+    AC_HELP_STRING([--with-zeromq=PATH],
+    [set PATH to the installation of zeromq library [[default=/usr/local]]]),
+    [
+     ZEROMQ_LIB=${with_zeromq}
+     ZEROMQ_FLAGS=-I$ZEROMQ_LIB/include
+],  [
+     ZEROMQ_LIB="/usr/local"
+     ZEROMQ_FLAGS="-I/usr/local/include"
+])
+
+
+AC_CHECK_HEADER([${ZEROMQ_LIB}/include/zmq.h], [], [
+    AC_MSG_ERROR([Could not find the 'zmq.h' header.
+Use the '--with-zeromq=PATH' option to specify location of ZeroMQ])])
+
+LIBS="-L$ZEROMQ_LIB/lib $LIBS"
+
+
+
 case "$(uname -s)" in
   CYGWIN*)
-    FLAGS="$LIB_FLAGS $ERLANG_FLAGS $JS_FLAGS -DXP_WIN $FLAGS"
+    FLAGS="$LIB_FLAGS $ERLANG_FLAGS $ZEROMQ_FLAGS $JS_FLAGS -DXP_WIN $FLAGS"
     CPPFLAGS="$FLAGS $CPPFLAGS"
     LDFLAGS="$FLAGS $LDFLAGS"
     IS_WINDOWS="TRUE"
@@ -99,14 +126,16 @@ case "$(uname -s)" in
     ;;
   *)
     # XP_UNIX required for jsapi.h and has been tested to work on Linux and Darwin.
-    FLAGS="$LIB_FLAGS $ERLANG_FLAGS $JS_FLAGS -DXP_UNIX $FLAGS"
+    FLAGS="$LIB_FLAGS $ERLANG_FLAGS $ZEROMQ_FLAGS $JS_FLAGS -DXP_UNIX $FLAGS"
     CPPFLAGS="$FLAGS $CPPFLAGS"
     # manually linking libm is requred for FreeBSD 7.0
     LDFLAGS="$FLAGS -lm $LDFLAGS"
     ;;
 esac
 
+
 AM_CONDITIONAL([WINDOWS], [test x$IS_WINDOWS = xTRUE])
+
 
 AC_CHECK_LIB([mozjs], [JS_NewContext], [JS_LIB_BASE=mozjs], [
     AC_CHECK_LIB([js], [JS_NewContext], [JS_LIB_BASE=js], [
@@ -277,10 +306,21 @@ AC_CHECK_HEADER([erl_driver.h], [], [
 Are the Erlang headers installed? Use the `--with-erlang' option to specify the
 path to the Erlang include directory.])])
 
+dnl Get Erlang $ROOT dir and lib dir.
+AC_ERLANG_SUBST_ROOT_DIR
+AC_ERLANG_SUBST_LIB_DIR
+
+dnl Check for erl_interface (used by port drivers).
+AC_ERLANG_CHECK_LIB([erl_interface],,
+    [AC_MSG_ERROR([erl_interface was not found!])])
+
+CXXFLAGS="-g ${CXXFLAGS% } -I${ERLANG_DRV_INCLUDE} -I${ERLANG_LIB_DIR_erl_interface}/include"
+
 AC_PATH_PROG([HELP2MAN_EXECUTABLE], [help2man])
 if test x${HELP2MAN_EXECUTABLE} = x; then
     AC_MSG_WARN([You will be unable to regenerate any man pages.])
 fi
+
 
 use_init=yes
 use_launchd=yes
@@ -405,6 +445,7 @@ AC_CONFIG_FILES([src/couchdb/couch.app.tpl])
 AC_CONFIG_FILES([src/couchdb/Makefile])
 AC_CONFIG_FILES([src/couchdb/priv/Makefile])
 AC_CONFIG_FILES([src/erlang-oauth/Makefile])
+AC_CONFIG_FILES([src/erlzmq/Makefile])
 AC_CONFIG_FILES([src/etap/Makefile])
 AC_CONFIG_FILES([src/ibrowse/Makefile])
 AC_CONFIG_FILES([src/mochiweb/Makefile])

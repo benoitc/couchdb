@@ -62,6 +62,10 @@ src/couchdb/priv/couchjs
 src/couchdb/priv/couchspawnkillable
 src/couchdb/priv/stat_descriptions.cfg
 src/erlang-oauth/oauth.app
+src/erlzmq/.deps/*
+src/erlzmq/.libs/*
+src/erlzmq/priv/*.so
+
 src/ibrowse/ibrowse.app
 src/mochiweb/mochiweb.app
 test/local.ini
