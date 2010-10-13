@@ -61,7 +61,7 @@ handle_changes_req(#httpd{method='GET'}=Req, Db) ->
 handle_changes_req(#httpd{method='POST'}=Req, Db) ->
     couch_httpd:validate_ctype(Req, "application/json"),
     {Props} = couch_httpd:json_body_obj(Req),
-    case couch_util:get_value(<<"docids">>, Props, nil) of
+    case couch_util:get_value(<<"doc_ids">>, Props, nil) of
     nil ->
         handle_changes_req1(Req, Db, nil);
     Docids when is_list(Docids) ->

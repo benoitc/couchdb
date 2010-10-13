@@ -404,7 +404,7 @@ couchTests.changes = function(debug) {
 
     options = {
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({"docids": ["something", "anotherthing", "andmore"]})         
+        body: JSON.stringify({"doc_ids": ["something", "anotherthing", "andmore"]})         
     };
 
     var req = CouchDB.request("POST", "/test_suite_db/_changes", options);
