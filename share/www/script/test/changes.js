@@ -425,23 +425,29 @@ couchTests.changes = function(debug) {
     T(resp.results[1].id === "anotherthing");
 
 
-    // filter docids with continuous
-    xhr = CouchDB.newXhr();
-    xhr.open("POST", "/test_suite_db/_changes?feed=continuous&timeout=500&since=7", true);
-    xhr.setRequestHeader("Content-Type", "application/json");
-    xhr.send(options.body || "");
+    if (!is_safari && xhr) {
+        // filter docids with continuous
+        xhr = CouchDB.newXhr();
+        xhr.open("POST", "/test_suite_db/_changes?feed=continuous&timeout=500&since=7", true);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        
+        xhr.send(options.body);
+        
+        T(db.save({"_id":"andmore", "bop" : "plankton"}).ok);
 
-    T(db.save({"_id":"andmore", "bop" : "plankton"}).ok);
+        
+        waitForSuccess(function() {
+            if (xhr.readyState != 4) {
+              throw("still waiting");
+            }
+           console.log(xhr.readyState);
+        }, "andmore-only");
 
-    
-    var lines, change1, change2;
-    waitForSuccess(function() {
-      lines = xhr.responseText.split("\n");
-      change1 = JSON.parse(lines[0]);
-    }, "andmore-only");
-
-    T(change1.seq == 8)
-    T(change1.id == "andmore")
+        line = JSON.parse(xhr.responseText.split("\n")[0]);
+        console.log(line);
+        T(line.seq == 8);
+        T(line.id == "andmore");
+    }
     
   });
 
