@@ -123,30 +123,30 @@ os_filter_fun(FilterName, Style, Req, Db) ->
             "filter parameter must be of the form `designname/filtername`"})
     end.
 
-builtin_filter_fun(<<"_docids",_/binary>>, Style, 
+builtin_filter_fun(<<"_doc_ids",_/binary>>, Style, 
         #httpd{method='POST'}=Req, _Db) ->
     {Props} = couch_httpd:json_body_obj(Req),
-    Docids =  couch_util:get_value(<<"doc_ids">>, Props, nil),
-    filter_docids(Docids, Style);
-builtin_filter_fun(<<"_docids", _/binary>>, Style, 
+    DocIds =  couch_util:get_value(<<"doc_ids">>, Props, nil),
+    filter_docids(DocIds, Style);
+builtin_filter_fun(<<"_doc_ids", _/binary>>, Style, 
         #httpd{method='GET'}=Req, _Db) ->
     QS = couch_httpd:qs(Req),
-    Docids = case couch_util:get_value("doc_ids", QS, nil) of
+    DocIds = case couch_util:get_value("doc_ids", QS, nil) of
         nil ->
             throw({bad_request, "`doc_ids` parameter is not set"});
-        Docids1 ->
-            ?JSON_DECODE(Docids1)
+        DocIds1 ->
+            ?JSON_DECODE(DocIds1)
     end,
-    filter_docids(Docids, Style);
+    filter_docids(DocIds, Style);
 builtin_filter_fun(<<"_design", _/binary>>, Style, _Req, _Db) ->
     filter_designdoc(Style);
 builtin_filter_fun(_FilterName, _Style, _Req, _Db) ->
     throw({bad_request,
             "unkown builtin filter name"}).
 
-filter_docids(Docids, Style) when is_list(Docids)->
+filter_docids(DocIds, Style) when is_list(DocIds)->
     fun(#doc_info{id=DocId, revs=Revs}) ->
-            case lists:member(DocId, Docids) of
+            case lists:member(DocId, DocIds) of
                 true ->
                     builtin_results(Style, Revs);
                 _ -> []
