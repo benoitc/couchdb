@@ -92,14 +92,8 @@ os_filter_fun(FilterName, Style, Req, Db) ->
     case [list_to_binary(couch_httpd:unquote(Part))
             || Part <- string:tokens(FilterName, "/")] of
     [] ->
-        fun(#doc_info{revs=[#rev_info{rev=Rev}|_]=Revs}) ->
-            case Style of
-            main_only ->
-                [{[{<<"rev">>, couch_doc:rev_to_str(Rev)}]}];
-            all_docs ->
-                [{[{<<"rev">>, couch_doc:rev_to_str(R)}]}
-                        || #rev_info{rev=R} <- Revs]
-            end
+        fun(#doc_info{revs=Revs}) ->
+                builtin_results(Style, Revs)
         end;
     [DName, FName] ->
         DesignId = <<"_design/", DName/binary>>,
@@ -152,16 +146,10 @@ builtin_filter_fun(_FilterName, _Style, _Req, _Db) ->
             "unkown builtin filter name"}).
 
 filter_docids(Docids, Style) when is_list(Docids)->
-    fun(#doc_info{id=DocId, revs=[#rev_info{rev=Rev}|_]=Revs}) ->
+    fun(#doc_info{id=DocId, revs=Revs}) ->
             case lists:member(DocId, Docids) of
                 true ->
-                    case Style of
-                        main_only ->
-                            [{[{<<"rev">>, couch_doc:rev_to_str(Rev)}]}];
-                        all_docs ->
-                            [{[{<<"rev">>, couch_doc:rev_to_str(R)}]}
-                                || #rev_info{rev=R} <- Revs]
-                    end;
+                    builtin_results(Style, Revs);
                 _ -> []
             end
     end;
@@ -170,20 +158,22 @@ filter_docids(_, _) ->
             list."}).
 
 filter_designdoc(Style) ->
-    fun(#doc_info{id=DocId, revs=[#rev_info{rev=Rev}|_]=Revs}) ->
+    fun(#doc_info{id=DocId, revs=Revs}) ->
             case DocId of
             <<"_design", _/binary>> ->
-                    case Style of
-                        main_only ->
-                            [{[{<<"rev">>, couch_doc:rev_to_str(Rev)}]}];
-                        all_docs ->
-                            [{[{<<"rev">>, couch_doc:rev_to_str(R)}]}
-                                || #rev_info{rev=R} <- Revs]
-                    end;
+                    builtin_results(Style, Revs);
                 _ -> []
             end
     end.
 
+builtin_results(Style, [#rev_info{rev=Rev}|_]=Revs) ->
+    case Style of
+        main_only ->
+            [{[{<<"rev">>, couch_doc:rev_to_str(Rev)}]}];
+        all_docs ->
+            [{[{<<"rev">>, couch_doc:rev_to_str(R)}]}
+                || #rev_info{rev=R} <- Revs]
+    end.
 
 get_changes_timeout(Args, Callback) ->
     #changes_args{
