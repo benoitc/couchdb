@@ -80,7 +80,6 @@ get_callback_acc(Callback) when is_function(Callback, 2) ->
 %% @type Req -> #httpd{} | {json_req, JsonObj()}
 make_filter_fun(FilterName, Style, Req, Db) ->
     FilterName1 = list_to_binary(FilterName),
-    ?LOG_INFO("filter name ~p~n", [FilterName1]),  
     case FilterName1 of
         (<<"_", _/binary>>) ->
             builtin_filter_fun(FilterName1, Style, Req, Db);
