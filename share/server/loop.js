@@ -17,6 +17,7 @@ function init_sandbox() {
     // if possible, use evalcx (not always available)
     sandbox = evalcx('');
     sandbox.emit = Views.emit;
+    sandbox.dummy_emit = Filter.dummy_emit;
     sandbox.sum = Views.sum;
     sandbox.log = log;
     sandbox.toJSON = Couch.toJSON;
@@ -43,6 +44,7 @@ var DDoc = (function() {
     "lists"     : Render.list,
     "shows"    : Render.show,
     "filters"   : Filter.filter,
+    "views"     : Filter.filter_view, 
     "updates"  : Render.update,
     "validate_doc_update" : Validate.validate
   };
