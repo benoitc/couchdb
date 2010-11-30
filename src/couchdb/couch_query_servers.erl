@@ -235,8 +235,6 @@ filter_view(DDoc, VName, Docs) ->
     [true, Passes] = ddoc_prompt(DDoc, [<<"views">>, VName, <<"map">>], [JsonDocs]),
     {ok, Passes}.
 
-
-
 filter_docs(Req, Db, DDoc, FName, Docs) ->
     JsonReq = case Req of
     {json_req, JsonObj} ->
