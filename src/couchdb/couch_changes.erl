@@ -165,7 +165,6 @@ filter_view(ViewName, Style, Req, Db) ->
             throw({bad_request, "Invalid 'view' parameter."});
         [DName, VName] ->
             DesignId = <<"_design/", DName/binary>>,
-            ?LOG_INFO("DesignId ~p~n", [DesignId]),
             DDoc = couch_httpd_db:couch_doc_open(Db, DesignId, nil, []),
             % validate that the ddoc has the filter fun
             #doc{body={Props}} = DDoc,
