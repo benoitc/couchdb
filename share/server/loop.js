@@ -11,13 +11,13 @@
 // the License.
 
 var sandbox = null;
+var filter_sandbox = null;
 
 function init_sandbox() {
   try {
     // if possible, use evalcx (not always available)
     sandbox = evalcx('');
     sandbox.emit = Views.emit;
-    sandbox.dummy_emit = Filter.dummy_emit;
     sandbox.sum = Views.sum;
     sandbox.log = log;
     sandbox.toJSON = Couch.toJSON;
@@ -33,6 +33,17 @@ function init_sandbox() {
   }
 };
 init_sandbox();
+
+function init_filter_sandbox() {
+  try {
+      filter_sandbox = sandbox;
+      filter_sandbox.emit = Filter.emit;
+  } catch(e) {
+    log(e.toSource());
+  }
+};
+
+init_filter_sandbox();
 
 // Commands are in the form of json arrays:
 // ["commandname",..optional args...]\n

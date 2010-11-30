@@ -190,7 +190,7 @@ couchTests.changes = function(debug) {
     _id : "_design/changes_filter",
     "filters" : {
       "bop" : "function(doc, req) { return (doc.bop);}",
-      "dynamic" : stringFun(function(doc, req) { 
+      "dynamic" : stringFun(function(doc, req) {
         var field = req.query.field;
         return doc[field];
       }),
@@ -220,7 +220,7 @@ couchTests.changes = function(debug) {
 
   var req = CouchDB.request("GET", "/test_suite_db/_changes?filter=changes_filter/bop");
   var resp = JSON.parse(req.responseText);
-  T(resp.results.length == 0); 
+  T(resp.results.length == 0);
 
   db.save({"bop" : "foom"});
   db.save({"bop" : false});
@@ -396,7 +396,7 @@ couchTests.changes = function(debug) {
           '  _ -> false' +
           '  end ' +
           'end.'
-      },
+      }
     };
 
     db.deleteDb();
@@ -423,7 +423,7 @@ couchTests.changes = function(debug) {
 
     var options = {
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({"doc_ids": ["something", "anotherthing", "andmore"]})         
+        body: JSON.stringify({"doc_ids": ["something", "anotherthing", "andmore"]})
     };
 
     var req = CouchDB.request("POST", "/test_suite_db/_changes?filter=_doc_ids", options);
@@ -466,7 +466,6 @@ couchTests.changes = function(debug) {
         
         T(db.save({"_id":"andmore", "bop" : "plankton"}).ok);
 
-        
         waitForSuccess(function() {
             if (xhr.readyState != 4) {
               throw("still waiting");
@@ -477,11 +476,6 @@ couchTests.changes = function(debug) {
         T(line.seq == 8);
         T(line.id == "andmore");
     }
-
-    
-
-
-    
   });
 
 };

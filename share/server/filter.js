@@ -13,12 +13,12 @@
 var Filter = (function() {
 
   var view_emit = false;
-  
+
   return {
-      dummy_emit : function(key, value) {
+      emit : function(key, value) {
         view_emit = true;
-      }, 
-      filter : function(fun, ddoc, args) {    
+      },
+      filter : function(fun, ddoc, args) {
         var results = [];
         var docs = args[0];
         var req = args[1];
@@ -28,10 +28,9 @@ var Filter = (function() {
         respond([true, results]);
       },
       filter_view : function(fun, ddoc, args) {
-        
-        // patch view function
-        var source = fun.toSource().replace(/emit\(/, "dummy_emit(");
-        fun = Couch.compileFunction(source);
+        // recompile
+        var source = fun.toSource();
+        fun = evalcx(source, filter_sandbox);
 
         var results = [];
         var docs = args[0];

@@ -188,10 +188,8 @@ filter_view(ViewName, Style, Req, Db) ->
                 [{[{<<"rev">>, couch_doc:rev_to_str({RevPos,RevId})}]}
                     || {Pass, #doc{revs={RevPos,[RevId|_]}}}
                     <- lists:zip(Passes, Docs), Pass == true]
-                    
             end
         end.
-
 
 builtin_results(Style, [#rev_info{rev=Rev}|_]=Revs) ->
     case Style of
@@ -252,7 +250,7 @@ send_changes(Args, Callback, UserAcc, Db, StartSeq, Prepend) ->
         [{dir, Dir}],
         {Db, StartSeq, Prepend, FilterFun, Callback, UserAcc, ResponseType,
             Limit, IncludeDocs}
-    ). 
+    ).
 
 keep_sending_changes(Args, Callback, UserAcc, Db, StartSeq, Prepend, Timeout,
     TimeoutFun) ->

@@ -20,6 +20,7 @@
 -export([reduce/3, rereduce/3,validate_doc_update/5]).
 -export([filter_docs/5]).
 -export([filter_view/3]).
+
 -export([with_ddoc_proc/2, proc_prompt/2, ddoc_prompt/3, ddoc_proc_prompt/3, json_doc/1]).
 
 % -export([test/0]).
@@ -57,7 +58,7 @@ start_doc_map(Lang, Functions, Lib) ->
     lists:foreach(fun(FunctionSource) ->
         true = proc_prompt(Proc, [<<"add_fun">>, FunctionSource])
     end, Functions),
-    {ok, Proc} .
+    {ok, Proc}.
 
 map_docs(Proc, Docs) ->
     % send the documents
@@ -82,7 +83,7 @@ map_docs(Proc, Docs) ->
     {ok, Results}.
 
 
- stop_doc_map(nil) ->
+stop_doc_map(nil) ->
     ok;
 stop_doc_map(Proc) ->
     ok = ret_os_process(Proc).
@@ -500,7 +501,7 @@ proc_with_ddoc(DDoc, DDocKey, LangProcs) ->
             {ok, SmartProc}
     end.
 
- proc_prompt(Proc, Args) ->
+proc_prompt(Proc, Args) ->
     {Mod, Func} = Proc#proc.prompt_fun,
     apply(Mod, Func, [Proc#proc.pid, Args]).
 
