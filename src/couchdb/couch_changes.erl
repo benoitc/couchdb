@@ -132,7 +132,7 @@ builtin_filter_fun("_design", Style, _Req, _Db) ->
     filter_designdoc(Style);
 builtin_filter_fun("_view", Style, Req, Db) ->
     ViewName = couch_httpd:qs_value(Req, "view", ""),
-    filter_view(ViewName, Style, Req, Db);
+    filter_view(ViewName, Style, Db);
 builtin_filter_fun(_FilterName, _Style, _Req, _Db) ->
     throw({bad_request, "unknown builtin filter name"}).
 
@@ -156,13 +156,13 @@ filter_designdoc(Style) ->
             end
     end.
 
-filter_view("", _Style, _Req, _Db) ->
+filter_view("", _Style, _Db) ->
     throw({bad_request, "`view` filter parameter is not provided."});
-filter_view(ViewName, Style, Req, Db) ->
+filter_view(ViewName, Style, Db) ->
     case [list_to_binary(couch_httpd:unquote(Part))
             || Part <- string:tokens(ViewName, "/")] of
         [] ->
-            throw({bad_request, "Invalid 'view' parameter."});
+            throw({bad_request, "Invalid `view` parameter."});
         [DName, VName] ->
             DesignId = <<"_design/", DName/binary>>,
             DDoc = couch_httpd_db:couch_doc_open(Db, DesignId, nil, []),

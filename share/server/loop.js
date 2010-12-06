@@ -36,8 +36,13 @@ init_sandbox();
 
 function init_filter_sandbox() {
   try {
-      filter_sandbox = sandbox;
-      filter_sandbox.emit = Filter.emit;
+    filter_sandbox = evalcx('');
+    for (var p in sandbox) {
+      if (sandbox.hasOwnProperty(p)) {
+        filter_sandbox[p] = sandbox[p];
+      }
+    }
+    filter_sandbox.emit = Filter.emit;
   } catch(e) {
     log(e.toSource());
   }
