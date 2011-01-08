@@ -29,6 +29,7 @@
 -export([reorder_results/2]).
 -export([url_strip_password/1]).
 -export([encode_doc_id/1]).
+-export([json_doc/1]).
 
 -include("couch_db.hrl").
 
@@ -163,6 +164,10 @@ json_user_ctx(#db{name=DbName, user_ctx=Ctx}) ->
             {<<"name">>,Ctx#user_ctx.name},
             {<<"roles">>,Ctx#user_ctx.roles}]}.
     
+json_doc(nil) -> null;
+json_doc(Doc) ->
+    couch_doc:to_json_obj(Doc, [revs]).
+
 
 % returns a random integer
 rand32() ->

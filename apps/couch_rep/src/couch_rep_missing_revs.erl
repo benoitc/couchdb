@@ -19,7 +19,8 @@
 
 -define(BUFFER_SIZE, 1000).
 
--include("couch_db.hrl").
+-include_lib("couch/include/couch_db.hrl").
+-include_lib("couch_httpd/include/couch_httpd.hrl").
 
 -record (state, {
     changes_loop,

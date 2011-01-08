@@ -11,7 +11,8 @@
 % the License.
 
 -module(couch_httpd).
--include("couch_db.hrl").
+-include("couch_httpd.hrl").
+-include_lib("couch/include/couch_db.hrl").
 
 -export([start_link/0, start_link/1, stop/0, handle_request/5]).
 

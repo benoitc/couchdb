@@ -14,9 +14,6 @@
 -define(DESIGN_DOC_PREFIX0, "_design").
 -define(DESIGN_DOC_PREFIX, "_design/").
 
--define(MIN_STR, <<"">>).
--define(MAX_STR, <<255>>). % illegal utf string
-
 -define(JSON_ENCODE(V), couch_util:json_encode(V)).
 -define(JSON_DECODE(V), couch_util:json_decode(V)).
 
@@ -72,21 +69,6 @@
     rev_tree = []
     }).
 
--record(httpd,
-    {mochi_req,
-    peer,
-    method,
-    requested_path_parts,
-    path_parts,
-    db_url_handlers,
-    user_ctx,
-    req_body = undefined,
-    design_url_handlers,
-    auth,
-    default_fun,
-    url_handlers
-    }).
-
 
 -record(doc,
     {
@@ -105,7 +87,6 @@
     meta = []
     }).
 
-
 -record(att,
     {
     name,
@@ -122,7 +103,6 @@
                       % additional values to support in the future:
                       %     deflate, compress
     }).
-
 
 -record(user_ctx,
     {
@@ -183,27 +163,39 @@
     }).
 
 
--record(view_query_args, {
-    start_key,
-    end_key,
-    start_docid = ?MIN_STR,
-    end_docid = ?MAX_STR,
+-record(index_header,
+    {seq=0,
+    purge_seq=0,
+    id_btree_state=nil,
+    view_states=nil
+    }).
 
-    direction = fwd,
-    inclusive_end=true, % aka a closed-interval
 
-    limit = 10000000000, % Huge number to simplify logic
-    skip = 0,
+% small value used in revision trees to indicate the revision isn't stored
+-define(REV_MISSING, []).
 
-    group_level = 0,
-
-    view_type = nil,
+-record(changes_args, {
+    feed = "normal",
+    dir = fwd,
+    since = 0,
+    limit = 1000000000000000,
+    style = main_only,
+    heartbeat,
+    timeout,
+    filter = "",
     include_docs = false,
-    stale = false,
-    multi_get = false,
-    callback = nil,
-    list = nil
+    db_open_options = []
 }).
+
+-record(btree, {
+    fd,
+    root,
+    extract_kv = fun({_Key, _Value} = KV) -> KV end,
+    assemble_kv = fun(Key, Value) -> {Key, Value} end,
+    less = fun(A, B) -> A < B end,
+    reduce = nil
+}).
+
 
 -record(view_fold_helper_funs, {
     reduce_count,
@@ -215,14 +207,6 @@
 -record(reduce_fold_helper_funs, {
     start_response,
     send_row
-}).
-
--record(extern_resp_args, {
-    code = 200,
-    stop = false,
-    data = <<>>,
-    ctype = "application/json",
-    headers = []
 }).
 
 -record(group, {
@@ -252,55 +236,3 @@
     options=[]
     }).
 
--record(index_header,
-    {seq=0,
-    purge_seq=0,
-    id_btree_state=nil,
-    view_states=nil
-    }).
-
--record(http_db, {
-    url,
-    auth = [],
-    resource = "",
-    headers = [
-        {"User-Agent", "CouchDB/"++couch:version()},
-        {"Accept", "application/json"},
-        {"Accept-Encoding", "gzip"}
-    ],
-    qs = [],
-    method = get,
-    body = nil,
-    options = [
-        {response_format,binary},
-        {inactivity_timeout, 30000}
-    ],
-    retries = 10,
-    pause = 500,
-    conn = nil
-}).
-
-% small value used in revision trees to indicate the revision isn't stored
--define(REV_MISSING, []).
-
--record(changes_args, {
-    feed = "normal",
-    dir = fwd,
-    since = 0,
-    limit = 1000000000000000,
-    style = main_only,
-    heartbeat,
-    timeout,
-    filter = "",
-    include_docs = false,
-    db_open_options = []
-}).
-
--record(btree, {
-    fd,
-    root,
-    extract_kv = fun({_Key, _Value} = KV) -> KV end,
-    assemble_kv = fun(Key, Value) -> {Key, Value} end,
-    less = fun(A, B) -> A < B end,
-    reduce = nil
-}).

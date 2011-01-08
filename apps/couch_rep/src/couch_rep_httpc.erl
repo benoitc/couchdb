@@ -11,7 +11,8 @@
 % the License.
 
 -module(couch_rep_httpc).
--include("couch_db.hrl").
+-include_lib("couch/include/couch_db.hrl").
+-include_lib("couch_httpd/include/couch_httpd.hrl").
 -include_lib("ibrowse/include/ibrowse.hrl").
 
 -export([db_exists/1, db_exists/2]).

@@ -22,7 +22,8 @@
 -define (BUFFER_SIZE, 1000).
 -define (MAX_CONCURRENT_REQUESTS, 100).
 
--include("couch_db.hrl").
+-include_lib("couch/include/couch_db.hrl").
+-include_lib("couch_httpd/include/couch_httpd.hrl").
 
 -record (state, {
     parent,

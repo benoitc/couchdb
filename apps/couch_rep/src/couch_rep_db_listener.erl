@@ -16,7 +16,8 @@
 -export([start_link/0, init/1, handle_call/3, handle_info/2, handle_cast/2]).
 -export([code_change/3, terminate/2]).
 
--include("couch_db.hrl").
+-include_lib("couch/include/couch_db.hrl").
+-include_lib("couch_httpd/include/couch_httpd.hrl").
 
 -define(DOC_TO_REP_ID_MAP, rep_doc_id_to_rep_id).
 -define(REP_ID_TO_DOC_ID_MAP, rep_id_to_rep_doc_id).

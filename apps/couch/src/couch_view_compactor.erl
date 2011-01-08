@@ -12,7 +12,7 @@
 
 -module(couch_view_compactor).
 
--include ("couch_db.hrl").
+-include("couch_db.hrl").
 
 -export([start_compact/2]).
 

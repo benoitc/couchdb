@@ -311,7 +311,7 @@ refresh_entry(Db, #doc_info{high_seq = DocSeq} = DocInfo) ->
 user_creds(#doc{deleted = true}) ->
     nil;
 user_creds(#doc{} = Doc) ->
-    {Creds} = couch_query_servers:json_doc(Doc),
+    {Creds} = couch_util:json_doc(Doc),
     Creds.
 
 

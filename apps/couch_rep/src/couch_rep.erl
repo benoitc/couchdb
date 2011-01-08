@@ -20,8 +20,9 @@
 -export([start_replication/3, end_replication/1, get_result/4]).
 -export([update_rep_doc/2]).
 
--include("couch_db.hrl").
--include("couch_js_functions.hrl").
+-include_lib("couch/include/couch_db.hrl").
+-include_lib("couch/src/couch_js_functions.hrl").
+-include_lib("couch_httpd/include/couch_httpd.hrl").
 
 -define(REP_ID_VERSION, 2).
 

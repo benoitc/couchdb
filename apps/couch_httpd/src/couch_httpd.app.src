@@ -1,0 +1,9 @@
+{application, couch_httpd, [
+    {description, "Apache CouchDB HTTPD layer"},
+    {vsn, "1.2.0p0"},
+    {registered, [
+        couch_external_manager,
+        couch_httpd
+    ]},
+    {applications, [kernel, stdlib, crypto, sasl, inets, oauth, mochiweb, ssl]}
+]}.

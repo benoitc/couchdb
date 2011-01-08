@@ -20,7 +20,8 @@
 -export([match_vhost/1, urlsplit_netloc/2]).
 -export([redirect_to_vhost/2]).
 
--include("couch_db.hrl").
+-include("couch_httpd.hrl").
+-include_lib("couch/include/couch_db.hrl").
 
 -define(SEPARATOR, $\/).
 -define(MATCH_ALL, {bind, '*'}).

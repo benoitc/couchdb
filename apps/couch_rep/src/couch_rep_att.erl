@@ -14,7 +14,8 @@
 
 -export([convert_stub/2, cleanup/0]).
 
--include("couch_db.hrl").
+-include_lib("couch/include/couch_db.hrl").
+-include_lib("couch_httpd/include/couch_httpd.hrl").
 
 convert_stub(#att{data=stub, name=Name} = Attachment,
             {#http_db{} = Db, Id, Rev}) ->

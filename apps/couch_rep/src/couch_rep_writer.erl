@@ -14,7 +14,9 @@
 
 -export([start_link/4]).
 
--include("couch_db.hrl").
+-include_lib("couch/include/couch_db.hrl").
+-include_lib("couch_httpd/include/couch_httpd.hrl").
+
 
 start_link(Parent, _Target, Reader, _PostProps) ->
     {ok, spawn_link(fun() -> writer_loop(Parent, Reader) end)}.

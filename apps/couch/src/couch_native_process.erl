@@ -19,7 +19,7 @@
 % This module provides the smallest possible native view-server.
 % With this module in-place, you can add the following to your couch INI files:
 %  [native_query_servers]
-%  erlang={couch_native_process, start_link, []}
+%  erlang={couch_view_native, start_link, []}
 %
 % Which will then allow following example map function to be used:
 %

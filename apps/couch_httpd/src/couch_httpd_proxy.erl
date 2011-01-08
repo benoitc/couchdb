@@ -13,7 +13,8 @@
 
 -export([handle_proxy_req/2]).
 
--include("couch_db.hrl").
+-include("couch_httpd.hrl").
+-include_lib("couch/include/couch_db.hrl").
 -include_lib("ibrowse/include/ibrowse.hrl").
 
 -define(TIMEOUT, infinity).

@@ -239,7 +239,7 @@ filter_docs(Req, Db, DDoc, FName, Docs) ->
     JsonReq = case Req of
     {json_req, JsonObj} ->
         JsonObj;
-    #httpd{} = HttpReq ->
+    HttpReq ->
         couch_httpd_external:json_req_obj(HttpReq, Db)
     end,
     JsonDocs = [couch_doc:to_json_obj(Doc, [revs]) || Doc <- Docs],

@@ -11,7 +11,8 @@
 % the License.
 
 -module(couch_httpd_oauth).
--include("couch_db.hrl").
+-include("couch_httpd.hrl").
+-include_lib("couch/include/couch_db.hrl").
 
 -export([oauth_authentication_handler/1, handle_oauth_req/1, consumer_lookup/2]).
 

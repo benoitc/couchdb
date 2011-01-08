@@ -20,7 +20,8 @@
 -define(BUFFER_SIZE, 1000).
 -define(DOC_IDS_FILTER_NAME, "_doc_ids").
 
--include("couch_db.hrl").
+-include_lib("couch/include/couch_db.hrl").
+-include_lib("couch_httpd/include/couch_httpd.hrl").
 -include_lib("ibrowse/include/ibrowse.hrl").
 
 -record (state, {

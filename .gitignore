@@ -3,6 +3,8 @@
 *.Tpo
 *.beam
 erl_crash.dump
+.DS_Store
+
 
 # building
 apps/*/ebin/
@@ -10,6 +12,7 @@ rel/dbcore
 rel/bigcouch.config
 rel/overlay.config
 install.mk
+test/etap/temp*
 
 # scons building
 couchjs/.sconf_temp/

@@ -21,7 +21,6 @@
 
 -include("couch_db.hrl").
 
-
 -record(server,{
     root_dir = []}).
 

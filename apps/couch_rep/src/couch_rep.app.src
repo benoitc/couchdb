@@ -1,0 +1,9 @@
+{application, couch_rep, [
+    {description, "Apache CouchDB HTTP replication"},
+    {vsn, "1.2.0p0"},
+    {registered, [
+        couch_rep_sup
+    ]},
+    {applications, [kernel, stdlib, crypto, sasl, inets, oauth,
+        mochiweb, ibrowse, ssl]}
+]}.
