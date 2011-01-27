@@ -22,42 +22,59 @@ install() ->
     %% time.
     _AllPluginsApps = sets:to_list(load_plugins(Apps)),
     
-    % save current plugin in env so we can uninstall them later.
+    % save current plugins so we can uninstall them later.
+    ets:new(?MODULE, [named_table, public]),
+    ets:insert(?MODULE, {plugins, PluginsApps}),
+
     application:set_env(couch, plugins, PluginsApps),
 
     io:format("~w plugins activated:~n", [length(Apps)]),
     [io:format("* ~s~n", [App]) || App <- Apps],
     ok.
 
-
 reinstall() ->
-    case application:get_env(couch, plugins) of
-        undefined ->
+    case ets:lookup(?MODULE, plugins) of
+        [] ->
             ok;
-        {ok, OldPluginsApps} ->
+        [{plugins, OldPluginsApps}] ->
             lists:foreach(fun unload_plugin/1, OldPluginsApps)
     end,
     install().
-
 
 find_plugins() ->
     PluginDir = couch_config:get("couchdb", "plugins_dir",
         filename:join(".", "plugins")),
 
     PluginsDirs = filelib:wildcard(PluginDir ++ "/*/ebin/*.app"),
-    PluginDepsDir = filelib:wildcard(PluginDir ++ "/*/deps/*/ebin/*.app"),
 
-    lists:map(fun prepare_dir_plugin/1, PluginsDirs ++ PluginDepsDir).
+    prepare_dir_plugin(PluginsDirs).
 
-prepare_dir_plugin(PluginAppDescFn) ->
+prepare_dir_plugin(PluginsDirs) ->
+    prepare_dir_plugin(PluginsDirs, []).
+
+prepare_dir_plugin([], Acc) ->
+    Acc;
+prepare_dir_plugin([PluginAppDescFn|Rest], Acc) ->
     PluginEBinDirN = filename:dirname(PluginAppDescFn),
-    code:add_path(PluginEBinDirN),
-
+    
     %% We want the second-last token
     NameTokens = string:tokens(PluginAppDescFn,"/."),
     PluginNameString = lists:nth(length(NameTokens) - 1, NameTokens),
-    {PluginEBinDirN, list_to_atom(PluginNameString)}.
 
+    PluginName = list_to_atom(PluginNameString),
+
+    case is_couchdb_app(PluginName) of
+        true ->
+            prepare_dir_plugin(Rest, Acc);
+        false ->
+            code:add_path(PluginEBinDirN),
+            Acc1 = [{PluginEBinDirN, PluginName}|Acc],
+            prepare_dir_plugin(Rest, Acc1)
+    end.
+
+is_couchdb_app(Name) ->
+    lists:member(Name, [crypto, public_key, sasl, inets, oauth, ssl,
+            ibrowse, mochiweb]).
 
 load_plugins(Apps) ->
     load_plugins(sets:new(), Apps).
@@ -81,7 +98,6 @@ load_plugins(Current, [App|Rest]) ->
             Unique = [A || A <- Required, not(sets:is_element(A, Current))],
             load_plugins(sets:add_element(App, Current), Rest ++ Unique)
     end.
-
 
 unload_plugin({Path, App}) ->
     application:stop(App),
