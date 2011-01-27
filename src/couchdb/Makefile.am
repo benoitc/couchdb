@@ -60,6 +60,7 @@ source_files = \
     couch_native_process.erl \
     couch_os_daemons.erl \
     couch_os_process.erl \
+	couch_plugins.erl \
     couch_primary_sup.erl \
     couch_query_servers.erl \
     couch_ref_counter.erl \
@@ -125,6 +126,7 @@ compiled_files = \
     couch_native_process.beam \
     couch_os_daemons.beam \
     couch_os_process.beam \
+	couch_plugins.beam \
     couch_primary_sup.beam \
     couch_query_servers.beam \
     couch_ref_counter.beam \

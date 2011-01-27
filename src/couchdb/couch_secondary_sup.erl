@@ -18,6 +18,9 @@ start_link() ->
     supervisor:start_link({local,couch_secondary_services}, ?MODULE, []).
 
 init([]) ->
+
+    couch_plugins:install(),
+
     SecondarySupervisors = [
         {couch_db_update_notifier_sup,
             {couch_db_update_notifier_sup, start_link, []},

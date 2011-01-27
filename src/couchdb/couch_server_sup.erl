@@ -120,8 +120,12 @@ stop() ->
     catch exit(whereis(couch_server_sup), normal).
 
 config_change("daemons", _) ->
-    supervisor:terminate_child(couch_server_sup, couch_secondary_services),
-    supervisor:restart_child(couch_server_sup, couch_secondary_services);
+    supervisor:terminate_child(couch_server_sup, 
+        couch_secondary_services),
+    supervisor:restart_child(couch_server_sup,
+        couch_secondary_services);
+config_change("couchdb", "plugins_dir") ->
+    couch_plugins:reinstall(); 
 config_change("couchdb", "util_driver_dir") ->
     init:restart().
 

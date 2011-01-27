@@ -374,6 +374,7 @@ AC_SUBST([locallibdir], [${libdir}/${package_identifier}])
 AC_SUBST([localstatelibdir], [${localstatedir}/lib/${package_identifier}])
 AC_SUBST([localstatelogdir], [${localstatedir}/log/${package_identifier}])
 AC_SUBST([localstaterundir], [${localstatedir}/run/${package_identifier}])
+AC_SUBST([localstateplugindir], [${datarootdir}/${package_identifier}/plugins])
 
 # On Windows we install directly into our erlang distribution.
 if test x${IS_WINDOWS} = xTRUE; then
