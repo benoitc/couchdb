@@ -11,6 +11,7 @@
 ## the License.
 
 couchprivlibdir = $(localerlanglibdir)/couch-$(version)/priv/lib
+couchpluginsdir = $(localerlanglibdir)/couch-$(version)/priv/plugins
 devcouchprivlibdir = $(abs_top_builddir)/src/couchdb/priv/.libs
 
 localconf_DATA = default.ini
@@ -35,7 +36,7 @@ default.ini: default.ini.tpl
 	    -e "s|%localstaterundir%|../var/run/couchdb|g" \
 	    -e "s|%couchprivlibdir%|../lib/couch-$(version)/priv/lib|g" \
 	    -e "s|%couchjs_command_name%|couchjs.exe|g" \
-		-e "s|%localstateplugindir%|../share/couchdb/plugins|g" \
+		-e "s|%couchpluginsdir%||../lib/couch-$(version)plugins|g" \
 	< $< > $@
 else
 default.ini: default.ini.tpl
@@ -48,7 +49,7 @@ default.ini: default.ini.tpl
 	    -e "s|%localstaterundir%|$(localstaterundir)|g" \
 	    -e "s|%couchprivlibdir%|$(couchprivlibdir)|g" \
 	    -e "s|%couchjs_command_name%|$(couchjs_command_name)|g" \
-		-e "s|%localstateplugindir%|$(localstateplugindir)|g" \
+		-e "s|%couchpluginsdir%|$(couchpluginsdir)|g" \
 	< $< > $@
 endif
 
@@ -62,7 +63,7 @@ default_dev.ini: default.ini.tpl
 	    -e "s|%localstaterundir%|$(abs_top_builddir)/tmp/run|g" \
 	    -e "s|%couchprivlibdir%|$(devcouchprivlibdir)|g" \
 	    -e "s|%couchjs_command_name%|$(couchjs_dev_command_name)|g" \
-		-e "s|%localstateplugindir%|$(abs_top_builddir)/tmp/plugins|g" \
+		-e "s|%couchpluginsdir%|$(abs_top_builddir)/tmp/plugins|g" \
 	< $< > $@
 
 # Noah said to not specify local.ini but it borks
