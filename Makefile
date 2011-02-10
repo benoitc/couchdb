@@ -18,12 +18,10 @@ all: compile
 
 compile:
 	@echo "==> couchjs (compile)"
-	@cd couchjs && python scons/scons.py
 	@./rebar compile
 
 clean:
 	@echo "==> couchjs (clean)"
-	@cd couchjs && python scons/scons.py --clean
 	@./rebar clean
 
 
