@@ -19,9 +19,6 @@
     handler
 }).
 
-default_config() ->
-    test_util:build_file("etc/couchdb/default_dev.ini").
-
 test_db_a_name() ->
     <<"couch_test_rep_att_comp_a">>.
 
@@ -41,9 +38,9 @@ main(_) ->
     ok.
 
 test() ->
-    couch_server_sup:start_link([default_config()]),
+    couch_server_sup:start_link(test_util:config_files()),
     put(addr, couch_config:get("httpd", "bind_address", "127.0.0.1")),
-    put(port, couch_config:get("httpd", "port", "5984")),
+    put(port, integer_to_list(mochiweb_socket_server:get(couch_httpd, port))),
     application:start(inets),
     ibrowse:start(),
     timer:sleep(1000),
@@ -58,14 +55,14 @@ test() ->
     create_db(test_db_b_name()),
 
     % enable compression
-    couch_config:set("attachments", "compression_level", "8"),
-    couch_config:set("attachments", "compressible_types", "text/*"),
+    couch_config:set("attachments", "compression_level", "8", false),
+    couch_config:set("attachments", "compressible_types", "text/*", false),
 
     % store doc with text attachment in DB A
     put_text_att(test_db_a_name()),
 
     % disable attachment compression
-    couch_config:set("attachments", "compression_level", "0"),
+    couch_config:set("attachments", "compression_level", "0", false),
 
     % do pull replication
     do_pull_replication(test_db_a_name(), test_db_b_name()),
@@ -85,14 +82,14 @@ test() ->
     create_db(test_db_b_name()),
 
     % enable compression
-    couch_config:set("attachments", "compression_level", "8"),
-    couch_config:set("attachments", "compressible_types", "text/*"),
+    couch_config:set("attachments", "compression_level", "8", false),
+    couch_config:set("attachments", "compressible_types", "text/*", false),
 
     % store doc with text attachment in DB A
     put_text_att(test_db_a_name()),
 
     % disable attachment compression
-    couch_config:set("attachments", "compression_level", "0"),
+    couch_config:set("attachments", "compression_level", "0", false),
 
     % do push replication
     do_push_replication(test_db_a_name(), test_db_b_name()),
@@ -112,14 +109,14 @@ test() ->
     create_db(test_db_b_name()),
 
     % enable compression
-    couch_config:set("attachments", "compression_level", "8"),
-    couch_config:set("attachments", "compressible_types", "text/*"),
+    couch_config:set("attachments", "compression_level", "8", false),
+    couch_config:set("attachments", "compressible_types", "text/*", false),
 
     % store doc with text attachment in DB A
     put_text_att(test_db_a_name()),
 
     % disable attachment compression
-    couch_config:set("attachments", "compression_level", "0"),
+    couch_config:set("attachments", "compression_level", "0", false),
 
     % do local-local replication
     do_local_replication(test_db_a_name(), test_db_b_name()),

@@ -13,7 +13,8 @@
 -module(couch_httpd).
 -include("couch_db.hrl").
 
--export([start_link/0, start_link/1, stop/0, handle_request/5]).
+-export([start_link/0, start_link/1, stop/0, config_change/2, 
+        handle_request/5]).
 
 -export([header_value/2,header_value/3,qs_value/2,qs_value/3,qs/1,qs_json_value/3]).
 -export([path/1,absolute_uri/2,body_length/1]).
@@ -57,8 +58,6 @@ start_link(Name, Options) ->
     % will restart us and then we will pick up the new settings.
 
     BindAddress = couch_config:get("httpd", "bind_address", any),
-    NoDelay = "true" == couch_config:get("httpd", "nodelay", "false"),
-
     DefaultSpec = "{couch_httpd_db, handle_request}",
     DefaultFun = make_arity_1_fun(
         couch_config:get("httpd", "default_handler", DefaultSpec)
@@ -82,46 +81,62 @@ start_link(Name, Options) ->
     UrlHandlers = dict:from_list(UrlHandlersList),
     DbUrlHandlers = dict:from_list(DbUrlHandlersList),
     DesignUrlHandlers = dict:from_list(DesignUrlHandlersList),
+    {ok, ServerOptions} = couch_util:parse_term(
+        couch_config:get("httpd", "server_options", "[]")),
+    {ok, SocketOptions} = couch_util:parse_term(
+        couch_config:get("httpd", "socket_options", "[]")),
     Loop = fun(Req)->
+        case SocketOptions of
+        [] ->
+            ok;
+        _ ->
+            ok = mochiweb_socket:setopts(Req:get(socket), SocketOptions)
+        end,
         apply(?MODULE, handle_request, [
             Req, DefaultFun, UrlHandlers, DbUrlHandlers, DesignUrlHandlers
         ])
     end,
 
-    % and off we go
+    % set mochiweb options
+    FinalOptions = lists:append([Options, ServerOptions, [
+            {loop, Loop},
+            {name, Name},
+            {ip, BindAddress}]]),
 
-    {ok, Pid} = case mochiweb_http:start(Options ++ [
-        {loop, Loop},
-        {name, Name},
-        {ip, BindAddress},
-        {nodelay,NoDelay}
-    ]) of
-    {ok, MochiPid} -> {ok, MochiPid};
-    {error, Reason} ->
-        io:format("Failure to start Mochiweb: ~s~n",[Reason]),
-        throw({error, Reason})
+    % launch mochiweb
+    {ok, Pid} = case mochiweb_http:start(FinalOptions) of
+        {ok, MochiPid} -> 
+            {ok, MochiPid};
+        {error, Reason} ->
+            io:format("Failure to start Mochiweb: ~s~n",[Reason]),
+            throw({error, Reason})
     end,
 
-    ok = couch_config:register(
-        fun("httpd", "bind_address") ->
-            ?MODULE:stop();
-        ("httpd", "port") ->
-            ?MODULE:stop();
-        ("httpd", "max_connections") ->
-            ?MODULE:stop();
-        ("httpd", "default_handler") ->
-            ?MODULE:stop();
-        ("httpd_global_handlers", _) ->
-            ?MODULE:stop();
-        ("httpd_db_handlers", _) ->
-            ?MODULE:stop();
-        ("vhosts", _) ->
-            ?MODULE:stop();
-        ("ssl", _) ->
-            ?MODULE:stop()
-        end, Pid),
-
+    ok = couch_config:register(fun ?MODULE:config_change/2, Pid),
     {ok, Pid}.
+
+
+stop() ->
+    mochiweb_http:stop(?MODULE).
+
+config_change("httpd", "bind_addres") ->
+    ?MODULE:stop();
+config_change("httpd", "port") ->
+    ?MODULE:stop();
+config_change("httpd", "default_handler") ->
+    ?MODULE:stop();
+config_change("httpd", "server_options") ->
+    ?MODULE:stop();
+config_change("httpd", "socket_options") ->
+    ?MODULE:stop();
+config_change("httpd_global_handlers", _) ->
+    ?MODULE:stop();
+config_change("httpd_db_handlers", _) ->
+    ?MODULE:stop();
+config_change("vhosts", _) ->
+    ?MODULE:stop();
+config_change("ssl", _) ->
+    ?MODULE:stop().
 
 % SpecStr is a string like "{my_module, my_fun}"
 %  or "{my_module, my_fun, <<"my_arg">>}"
@@ -152,10 +167,6 @@ make_arity_3_fun(SpecStr) ->
 % SpecStr is "{my_module, my_fun}, {my_module2, my_fun2}"
 make_fun_spec_strs(SpecStr) ->
     re:split(SpecStr, "(?<=})\\s*,\\s*(?={)", [{return, list}]).
-
-stop() ->
-    mochiweb_http:stop(?MODULE).
-
 
 handle_request(MochiReq, DefaultFun, UrlHandlers, DbUrlHandlers, 
     DesignUrlHandlers) ->
@@ -226,7 +237,7 @@ handle_request_int(MochiReq, DefaultFun,
 
     % alias HEAD to GET as mochiweb takes care of stripping the body
     Method = case Method2 of
-            'HEAD' -> 'GET';
+        'HEAD' -> 'GET';
         Other -> Other
     end,
 
@@ -234,10 +245,9 @@ handle_request_int(MochiReq, DefaultFun,
         mochi_req = MochiReq,
         peer = MochiReq:get(peer),
         method = Method,
-        requested_path_parts = [list_to_binary(couch_httpd:unquote(Part))
-                || Part <- string:tokens(RequestedPath, "/")],
-        path_parts = [list_to_binary(couch_httpd:unquote(Part))
-                || Part <- string:tokens(Path, "/")],
+        requested_path_parts =
+            [?l2b(unquote(Part)) || Part <- string:tokens(RequestedPath, "/")],
+        path_parts = [?l2b(unquote(Part)) || Part <- string:tokens(Path, "/")],
         db_url_handlers = DbUrlHandlers,
         design_url_handlers = DesignUrlHandlers,
         default_fun = DefaultFun,
@@ -332,7 +342,7 @@ validate_referer(Req) ->
     end.
 
 validate_ctype(Req, Ctype) ->
-    case couch_httpd:header_value(Req, "Content-Type") of
+    case header_value(Req, "Content-Type") of
     undefined ->
         throw({bad_ctype, "Content-Type must be "++Ctype});
     ReqCtype ->
@@ -488,21 +498,21 @@ doc_etag(#doc{revs={Start, [DiskRev|_]}}) ->
 
 make_etag(Term) ->
     <<SigInt:128/integer>> = couch_util:md5(term_to_binary(Term)),
-    list_to_binary("\"" ++ lists:flatten(io_lib:format("~.36B",[SigInt])) ++ "\"").
+    iolist_to_binary([$", io_lib:format("~.36B", [SigInt]), $"]).
 
 etag_match(Req, CurrentEtag) when is_binary(CurrentEtag) ->
     etag_match(Req, binary_to_list(CurrentEtag));
 
 etag_match(Req, CurrentEtag) ->
     EtagsToMatch = string:tokens(
-        couch_httpd:header_value(Req, "If-None-Match", ""), ", "),
+        header_value(Req, "If-None-Match", ""), ", "),
     lists:member(CurrentEtag, EtagsToMatch).
 
 etag_respond(Req, CurrentEtag, RespFun) ->
     case etag_match(Req, CurrentEtag) of
     true ->
         % the client has this in their cache.
-        couch_httpd:send_response(Req, 304, [{"Etag", CurrentEtag}], <<>>);
+        send_response(Req, 304, [{"Etag", CurrentEtag}], <<>>);
     false ->
         % Run the function.
         RespFun()
@@ -517,11 +527,11 @@ verify_is_server_admin(#user_ctx{roles=Roles}) ->
     end.
 
 log_request(#httpd{mochi_req=MochiReq,peer=Peer}, Code) ->
-    ?LOG_INFO("~s - - ~p ~s ~B", [
+    ?LOG_INFO("~s - - ~s ~s ~B", [
         Peer,
-        couch_util:to_existing_atom(MochiReq:get(method)),
+        MochiReq:get(method),
         MochiReq:get(raw_path),
-        couch_util:to_integer(Code)
+        Code
     ]).
 
 
@@ -614,9 +624,7 @@ send_json(Req, Code, Headers, Value) ->
         {"Content-Type", negotiate_content_type(Req)},
         {"Cache-Control", "must-revalidate"}
     ],
-    Body = list_to_binary(
-        [start_jsonp(Req), ?JSON_ENCODE(Value), end_jsonp(), $\n]
-    ),
+    Body = [start_jsonp(Req), ?JSON_ENCODE(Value), end_jsonp(), $\n],
     send_response(Req, Code, DefaultHeaders ++ Headers, Body).
 
 start_json_response(Req, Code) ->
@@ -670,13 +678,11 @@ start_jsonp(Req) ->
     end.
 
 end_jsonp() ->
-    Resp = case get(jsonp) of
+    case erlang:erase(jsonp) of
         no_jsonp -> [];
         [] -> [];
         _ -> ");"
-    end,
-    put(jsonp, undefined),
-    Resp.
+    end.
 
 validate_callback(CallBack) when is_binary(CallBack) ->
     validate_callback(binary_to_list(CallBack));
@@ -821,8 +827,7 @@ send_chunked_error(Resp, Error) ->
     last_chunk(Resp).
 
 send_redirect(Req, Path) ->
-     Headers = [{"Location", couch_httpd:absolute_uri(Req, Path)}],
-     send_response(Req, 301, Headers, <<>>).
+     send_response(Req, 301, [{"Location", absolute_uri(Req, Path)}], <<>>).
 
 negotiate_content_type(#httpd{mochi_req=MochiReq}) ->
     %% Determine the appropriate Content-Type header for a JSON response
@@ -840,7 +845,7 @@ negotiate_content_type(#httpd{mochi_req=MochiReq}) ->
 
 server_header() ->
     OTPVersion = "R" ++ integer_to_list(erlang:system_info(compat_rel)) ++ "B",
-    [{"Server", "CouchDB/" ++ couch:version() ++
+    [{"Server", "CouchDB/" ++ couch_server:get_version() ++
                 " (Erlang OTP/" ++ OTPVersion ++ ")"}].
 
 
@@ -855,13 +860,13 @@ parse_multipart_request(ContentType, DataFun, Callback) ->
             data_fun=DataFun,
             callback=Callback},
     {Mp2, _NilCallback} = read_until(Mp, <<"--", Boundary0/binary>>,
-        fun(Next)-> nil_callback(Next) end),
+        fun nil_callback/1),
     #mp{buffer=Buffer, data_fun=DataFun2, callback=Callback2} =
             parse_part_header(Mp2),
     {Buffer, DataFun2, Callback2}.
 
 nil_callback(_Data)->
-    fun(Next) -> nil_callback(Next) end.
+    fun nil_callback/1.
 
 get_boundary({"multipart/" ++ _, Opts}) ->
     case couch_util:get_value("boundary", Opts) of

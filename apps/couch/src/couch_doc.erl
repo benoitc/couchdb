@@ -177,6 +177,10 @@ parse_revs([Rev | Rest]) ->
 
 
 validate_docid(Id) when is_binary(Id) ->
+    case couch_util:validate_utf8(Id) of
+        false -> throw({bad_request, <<"Document id must be valid UTF-8">>});
+        true -> ok
+    end,
     case Id of
     <<"_design/", _/binary>> -> ok;
     <<"_local/", _/binary>> -> ok;
@@ -507,26 +511,16 @@ mp_parse_doc(body_end, AccBytes) ->
     receive {get_doc_bytes, From} ->
         From ! {doc_bytes, lists:reverse(AccBytes)}
     end,
-    fun (Next) ->
-        mp_parse_atts(Next)
-    end.
+    fun mp_parse_atts/1.
 
 mp_parse_atts(eof) ->
     ok;
 mp_parse_atts({headers, _H}) ->
-    fun (Next) ->
-        mp_parse_atts(Next)
-    end;
+    fun mp_parse_atts/1;
 mp_parse_atts({body, Bytes}) ->
     receive {get_bytes, From} ->
         From ! {bytes, Bytes}
     end,
-    fun (Next) ->
-        mp_parse_atts(Next)
-    end;
+    fun mp_parse_atts/1;
 mp_parse_atts(body_end) ->
-    fun (Next) ->
-        mp_parse_atts(Next)
-    end.
-
-
+    fun mp_parse_atts/1.

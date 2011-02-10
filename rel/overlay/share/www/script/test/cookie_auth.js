@@ -28,14 +28,6 @@ couchTests.cookie_auth = function(debug) {
     return secret;
   }
 
-  function wait(ms) {
-    var t0 = new Date(), t1;
-    do {
-      CouchDB.request("GET", "/");
-      t1 = new Date();
-    } while ((t1 - t0) <= ms);
-  }
-
   // this function will be called on the modified server
   var testFun = function () {
     try {
@@ -43,7 +35,7 @@ couchTests.cookie_auth = function(debug) {
       var usersDb = new CouchDB("test_suite_users", {"X-Couch-Full-Commit":"false"});
       usersDb.deleteDb();
       usersDb.createDb();
-      wait(500); 
+      
       // test that the users db is born with the auth ddoc
       var ddoc = usersDb.open("_design/_auth");
       T(ddoc.validate_doc_update);

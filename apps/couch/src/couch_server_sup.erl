@@ -14,7 +14,7 @@
 -behaviour(supervisor).
 
 
--export([start_link/1, couch_config_start_link_wrapper/2,
+-export([start_link/1,stop/0, couch_config_start_link_wrapper/2,
         restart_core_server/0, config_change/2]).
 
 -include("couch_db.hrl").
@@ -56,7 +56,7 @@ start_server(IniFiles) ->
     LogLevel = couch_config:get("log", "level", "info"),
     % announce startup
     io:format("Apache CouchDB ~s (LogLevel=~s) is starting.~n", [
-        couch:version(),
+        couch_server:get_version(),
         LogLevel
     ]),
     case LogLevel of
@@ -68,7 +68,7 @@ start_server(IniFiles) ->
     end,
 
     BaseChildSpecs =
-    {{one_for_all, 10, 60},
+    {{one_for_all, 10, 3600},
         [{couch_config,
             {couch_server_sup, couch_config_start_link_wrapper, [IniFiles, ConfigPid]},
             permanent,
@@ -89,9 +89,14 @@ start_server(IniFiles) ->
             [couch_secondary_sup]}
         ]},
 
+    % ensure these applications are running
+    application:start(ibrowse),
+    application:start(crypto),
+
     {ok, Pid} = supervisor:start_link(
         {local, couch_server_sup}, couch_server_sup, BaseChildSpecs),
 
+    % launch the icu bridge
     % just restart if one of the config settings change.
     couch_config:register(fun ?MODULE:config_change/2, Pid),
 
@@ -111,12 +116,14 @@ start_server(IniFiles) ->
 
     {ok, Pid}.
 
+stop() ->
+    catch exit(whereis(couch_server_sup), normal).
+
 config_change("daemons", _) ->
-    exit(whereis(couch_server_sup), shutdown);
+    supervisor:terminate_child(couch_server_sup, couch_secondary_services),
+    supervisor:restart_child(couch_server_sup, couch_secondary_services);
 config_change("couchdb", "util_driver_dir") ->
-    [Pid] = [P || {collation_driver,P,_,_}
-        <- supervisor:which_children(couch_primary_services)],
-    Pid ! reload_driver.
+    init:restart().
 
 init(ChildSpecs) ->
     {ok, ChildSpecs}.

@@ -22,7 +22,7 @@
 
 -behaviour(supervisor).
 
--export([start_link/0,init/1, config_change/3]).
+-export([start_link/0, init/1, config_change/3]).
 
 start_link() ->
     supervisor:start_link({local, couch_db_update_notifier_sup},
@@ -58,3 +58,4 @@ config_change("update_notification", Id, Exe) ->
     supervisor:terminate_child(couch_db_update_notifier_sup, Id),
     supervisor:delete_child(couch_db_update_notifier_sup, Id),
     supervisor:start_child(couch_db_update_notifier_sup, ChildSpec).
+

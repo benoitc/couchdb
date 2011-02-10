@@ -110,11 +110,8 @@ init(_) ->
     ok = couch_config:register(
         fun("couch_httpd_auth", "auth_cache_size", SizeList) ->
             Size = list_to_integer(SizeList),
-            ok = gen_server:call(?MODULE, {new_max_cache_size, Size}, infinity)
-        end
-    ),
-    ok = couch_config:register(
-        fun("couch_httpd_auth", "authentication_db", DbName) ->
+            ok = gen_server:call(?MODULE, {new_max_cache_size, Size}, infinity);
+        ("couch_httpd_auth", "authentication_db", DbName) ->
             ok = gen_server:call(?MODULE, {new_auth_db, ?l2b(DbName)}, infinity)
         end
     ),
@@ -167,26 +164,13 @@ handle_call(auth_db_compacted, _From, State) ->
     ),
     {reply, ok, State};
 
+handle_call({new_max_cache_size, NewSize},
+        _From, #state{cache_size = Size} = State) when NewSize >= Size ->
+    {reply, ok, State#state{max_cache_size = NewSize}};
+
 handle_call({new_max_cache_size, NewSize}, _From, State) ->
-    case NewSize >= State#state.cache_size of
-    true ->
-        ok;
-    false ->
-        lists:foreach(
-            fun(_) ->
-                LruTime = ets:last(?BY_ATIME),
-                [{LruTime, UserName}] = ets:lookup(?BY_ATIME, LruTime),
-                true = ets:delete(?BY_ATIME, LruTime),
-                true = ets:delete(?BY_USER, UserName)
-            end,
-            lists:seq(1, State#state.cache_size - NewSize)
-        )
-    end,
-    NewState = State#state{
-        max_cache_size = NewSize,
-        cache_size = lists:min([NewSize, State#state.cache_size])
-    },
-    {reply, ok, NewState};
+    free_mru_cache_entries(State#state.cache_size - NewSize),
+    {reply, ok, State#state{max_cache_size = NewSize, cache_size = NewSize}};
 
 handle_call({fetch, UserName}, _From, State) ->
     {Credentials, NewState} = case ets:lookup(?BY_USER, UserName) of
@@ -240,6 +224,8 @@ clear_cache(State) ->
     State#state{cache_size = 0}.
 
 
+add_cache_entry(_, _, _, #state{max_cache_size = 0} = State) ->
+    State;
 add_cache_entry(UserName, Credentials, ATime, State) ->
     case State#state.cache_size >= State#state.max_cache_size of
     true ->
@@ -251,16 +237,17 @@ add_cache_entry(UserName, Credentials, ATime, State) ->
     true = ets:insert(?BY_USER, {UserName, {Credentials, ATime}}),
     State#state{cache_size = couch_util:get_value(size, ets:info(?BY_USER))}.
 
+free_mru_cache_entries(0) ->
+    ok;
+free_mru_cache_entries(N) when N > 0 ->
+    free_mru_cache_entry(),
+    free_mru_cache_entries(N - 1).
 
 free_mru_cache_entry() ->
-    case ets:last(?BY_ATIME) of
-    '$end_of_table' ->
-        ok;  % empty cache
-    LruTime ->
-        [{LruTime, UserName}] = ets:lookup(?BY_ATIME, LruTime),
-        true = ets:delete(?BY_ATIME, LruTime),
-        true = ets:delete(?BY_USER, UserName)
-    end.
+    MruTime = ets:last(?BY_ATIME),
+    [{MruTime, UserName}] = ets:lookup(?BY_ATIME, MruTime),
+    true = ets:delete(?BY_ATIME, MruTime),
+    true = ets:delete(?BY_USER, UserName).
 
 
 cache_hit(UserName, Credentials, ATime) ->

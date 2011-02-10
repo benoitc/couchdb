@@ -505,12 +505,13 @@ all_docs_view(Req, Db, Keys) ->
         nil ->
             FoldlFun = couch_httpd_view:make_view_fold_fun(Req, QueryArgs, CurrentEtag, Db, UpdateSeq,
                 TotalRowCount, #view_fold_helper_funs{
-                    reduce_count = fun couch_db:enum_docs_reduce_to_count/1
+                    reduce_count = fun couch_db:enum_docs_reduce_to_count/1,
+                    send_row = fun all_docs_send_json_view_row/5
                 }),
             AdapterFun = fun(#full_doc_info{id=Id}=FullDocInfo, Offset, Acc) ->
                 case couch_doc:to_doc_info(FullDocInfo) of
-                #doc_info{revs=[#rev_info{deleted=false, rev=Rev}|_]} ->
-                    FoldlFun({{Id, Id}, {[{rev, couch_doc:rev_to_str(Rev)}]}}, Offset, Acc);
+                #doc_info{revs=[#rev_info{deleted=false}|_]} = DocInfo ->
+                    FoldlFun({{Id, Id}, DocInfo}, Offset, Acc);
                 #doc_info{revs=[#rev_info{deleted=true}|_]} ->
                     {ok, Acc}
                 end
@@ -522,7 +523,8 @@ all_docs_view(Req, Db, Keys) ->
         _ ->
             FoldlFun = couch_httpd_view:make_view_fold_fun(Req, QueryArgs, CurrentEtag, Db, UpdateSeq,
                 TotalRowCount, #view_fold_helper_funs{
-                    reduce_count = fun(Offset) -> Offset end
+                    reduce_count = fun(Offset) -> Offset end,
+                    send_row = fun all_docs_send_json_view_row/5
                 }),
             KeyFoldFun = case Dir of
             fwd ->
@@ -534,10 +536,8 @@ all_docs_view(Req, Db, Keys) ->
                 fun(Key, FoldAcc) ->
                     DocInfo = (catch couch_db:get_doc_info(Db, Key)),
                     Doc = case DocInfo of
-                    {ok, #doc_info{id=Id, revs=[#rev_info{deleted=false, rev=Rev}|_]}} ->
-                        {{Id, Id}, {[{rev, couch_doc:rev_to_str(Rev)}]}};
-                    {ok, #doc_info{id=Id, revs=[#rev_info{deleted=true, rev=Rev}|_]}} ->
-                        {{Id, Id}, {[{rev, couch_doc:rev_to_str(Rev)}, {deleted, true}]}};
+                    {ok, #doc_info{id = Id} = Di} ->
+                        {{Id, Id}, Di};
                     not_found ->
                         {{Key, error}, not_found};
                     _ ->
@@ -550,6 +550,27 @@ all_docs_view(Req, Db, Keys) ->
             couch_httpd_view:finish_view_fold(Req, TotalRowCount, 0, FoldResult, JsonParams)
         end
     end).
+
+all_docs_send_json_view_row(Resp, Db, KV, IncludeDocs, RowFront) ->
+    JsonRow = all_docs_view_row_obj(Db, KV, IncludeDocs),
+    send_chunk(Resp, RowFront ++ ?JSON_ENCODE(JsonRow)),
+    {ok, ",\r\n"}.
+
+all_docs_view_row_obj(_Db, {{DocId, error}, Value}, _IncludeDocs) ->
+    {[{key, DocId}, {error, Value}]};
+all_docs_view_row_obj(Db, {_KeyDocId, DocInfo}, true) ->
+    {all_docs_row(DocInfo) ++ couch_httpd_view:doc_member(Db, DocInfo)};
+all_docs_view_row_obj(_Db, {_KeyDocId, DocInfo}, _IncludeDocs) ->
+    {all_docs_row(DocInfo)}.
+
+all_docs_row(#doc_info{id = Id, revs = [RevInfo | _]}) ->
+    #rev_info{rev = Rev, deleted = Del} = RevInfo,
+    [ {id, Id}, {key, Id},
+        {value, {[{rev, couch_doc:rev_to_str(Rev)}] ++ case Del of
+            true -> [{deleted, true}];
+            false -> []
+            end}} ].
+
 
 db_doc_req(#httpd{method='DELETE'}=Req, Db, DocId) ->
     % check for the existence of the doc to handle the 404 case.
@@ -737,11 +758,11 @@ send_doc_efficiently(#httpd{mochi_req = MochiReq} = Req,
             JsonBytes = ?JSON_ENCODE(couch_doc:to_json_obj(Doc, 
                     [attachments, follows|Options])),
             {ContentType, Len} = couch_doc:len_doc_to_multi_part_stream(
-                    Boundary,JsonBytes, Atts,false),
+                    Boundary,JsonBytes, Atts, true),
             CType = {<<"Content-Type">>, ContentType},
             {ok, Resp} = start_response_length(Req, 200, [CType|Headers], Len),
             couch_doc:doc_to_multi_part_stream(Boundary,JsonBytes,Atts,
-                    fun(Data) -> couch_httpd:send(Resp, Data) end, false)
+                    fun(Data) -> couch_httpd:send(Resp, Data) end, true)
         end;
     false ->
         send_json(Req, 200, Headers, couch_doc:to_json_obj(Doc, Options))
@@ -750,13 +771,7 @@ send_doc_efficiently(#httpd{mochi_req = MochiReq} = Req,
 send_docs_multipart(Req, Results, Options1) ->
     OuterBoundary = couch_uuids:random(),
     InnerBoundary = couch_uuids:random(),
-    {Options, CompressedAtts} =
-    case couch_httpd:header_value(Req, "X-CouchDB-Send-Encoded-Atts") of
-    "true" ->
-        {[attachments, follows, att_encoding_info | Options1], true};
-    _ ->
-        {[attachments, follows | Options1], false}
-    end,
+    Options = [attachments, follows, att_encoding_info | Options1],
     CType = {"Content-Type", 
         "multipart/mixed; boundary=\"" ++ ?b2l(OuterBoundary) ++ "\""},
     {ok, Resp} = start_chunked_response(Req, 200, [CType]),
@@ -765,12 +780,12 @@ send_docs_multipart(Req, Results, Options1) ->
         fun({ok, #doc{atts=Atts}=Doc}) ->
             JsonBytes = ?JSON_ENCODE(couch_doc:to_json_obj(Doc, Options)),
             {ContentType, _Len} = couch_doc:len_doc_to_multi_part_stream(
-                    InnerBoundary, JsonBytes, Atts, CompressedAtts),
+                    InnerBoundary, JsonBytes, Atts, true),
             couch_httpd:send_chunk(Resp, <<"\r\nContent-Type: ",
                     ContentType/binary, "\r\n\r\n">>),
             couch_doc:doc_to_multi_part_stream(InnerBoundary, JsonBytes, Atts,
                     fun(Data) -> couch_httpd:send_chunk(Resp, Data)
-                    end, CompressedAtts),
+                    end, true),
              couch_httpd:send_chunk(Resp, <<"\r\n--", OuterBoundary/binary>>);
         ({{not_found, missing}, RevId}) ->
              RevStr = couch_doc:rev_to_str(RevId),
@@ -1163,6 +1178,9 @@ parse_doc_query(Req) ->
         {"open_revs", RevsJsonStr} ->
             JsonArray = ?JSON_DECODE(RevsJsonStr),
             Args#doc_query_args{open_revs=couch_doc:parse_revs(JsonArray)};
+        {"latest", "true"} ->
+            Options = [latest | Args#doc_query_args.options],
+            Args#doc_query_args{options=Options};
         {"atts_since", RevsJsonStr} ->
             JsonArray = ?JSON_DECODE(RevsJsonStr),
             Args#doc_query_args{atts_since = couch_doc:parse_revs(JsonArray)};

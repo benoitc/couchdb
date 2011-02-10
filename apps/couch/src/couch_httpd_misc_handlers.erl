@@ -32,7 +32,7 @@
 handle_welcome_req(#httpd{method='GET'}=Req, WelcomeMessage) ->
     send_json(Req, {[
         {couchdb, WelcomeMessage},
-        {version, list_to_binary(couch:version())}
+        {version, list_to_binary(couch_server:get_version())}
     ]});
 handle_welcome_req(Req, _) ->
     send_method_not_allowed(Req, "GET,HEAD").
@@ -236,8 +236,12 @@ handle_config_req(Req) ->
 handle_approved_config_req(#httpd{method='PUT', path_parts=[_, Section, Key]}=Req, Persist) ->
     Value = couch_httpd:json_body(Req),
     OldValue = couch_config:get(Section, Key, ""),
-    ok = couch_config:set(Section, Key, ?b2l(Value), Persist),
-    send_json(Req, 200, list_to_binary(OldValue));
+    case couch_config:set(Section, Key, ?b2l(Value), Persist) of
+    ok ->
+        send_json(Req, 200, list_to_binary(OldValue));
+    Error ->
+        throw(Error)
+    end;
 % DELETE /_config/Section/Key
 handle_approved_config_req(#httpd{method='DELETE',path_parts=[_,Section,Key]}=Req, Persist) ->
     case couch_config:get(Section, Key, null) of

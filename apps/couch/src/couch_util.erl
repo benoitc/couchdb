@@ -12,18 +12,17 @@
 
 -module(couch_util).
 
--export([priv_dir/0, start_driver/1, normpath/1]).
+-export([priv_dir/0, normpath/1]).
 -export([should_flush/0, should_flush/1, to_existing_atom/1]).
 -export([rand32/0, implode/2, collate/2, collate/3]).
 -export([abs_pathname/1,abs_pathname/2, trim/1]).
 -export([encodeBase64Url/1, decodeBase64Url/1]).
--export([to_hex/1, parse_term/1, dict_find/3]).
+-export([validate_utf8/1, to_hex/1, parse_term/1, dict_find/3]).
 -export([get_nested_json_value/2, json_user_ctx/1]).
 -export([proplist_apply_field/2, json_apply_field/2]).
 -export([to_binary/1, to_integer/1, to_list/1, url_encode/1]).
 -export([json_encode/1, json_decode/1]).
 -export([verify/2,simple_call/2,shutdown_sync/1]).
--export([compressible_att_type/1]).
 -export([get_value/2, get_value/3]).
 -export([md5/1, md5_init/0, md5_update/2, md5_final/1]).
 -export([reorder_results/2]).
@@ -43,16 +42,6 @@ priv_dir() ->
             % -Damien
             code:priv_dir(couchdb);
         Dir -> Dir
-    end.
-
-start_driver(LibDir) ->
-    case erl_ddll:load_driver(LibDir, "couch_icu_driver") of
-    ok ->
-        ok;
-    {error, already_loaded} ->
-        ok = erl_ddll:reload_driver(LibDir, "couch_icu_driver");
-    {error, Error} ->
-        exit(erl_ddll:format_error(Error))
     end.
 
 % Normalize a pathname by removing .. and . components.
@@ -105,6 +94,37 @@ simple_call(Pid, Message) ->
         end
     after
         erlang:demonitor(MRef, [flush])
+    end.
+
+validate_utf8(Data) when is_list(Data) ->
+    validate_utf8(?l2b(Data));
+validate_utf8(Bin) when is_binary(Bin) ->
+    validate_utf8_fast(Bin, 0).
+
+validate_utf8_fast(B, O) ->
+    case B of
+        <<_:O/binary>> ->
+            true;
+        <<_:O/binary, C1, _/binary>> when
+                C1 < 128 ->
+            validate_utf8_fast(B, 1 + O);
+        <<_:O/binary, C1, C2, _/binary>> when
+                C1 >= 194, C1 =< 223,
+                C2 >= 128, C2 =< 191 ->
+            validate_utf8_fast(B, 2 + O);
+        <<_:O/binary, C1, C2, C3, _/binary>> when
+                C1 >= 224, C1 =< 239,
+                C2 >= 128, C2 =< 191,
+                C3 >= 128, C3 =< 191 ->
+            validate_utf8_fast(B, 3 + O);
+        <<_:O/binary, C1, C2, C3, C4, _/binary>> when
+                C1 >= 240, C1 =< 244,
+                C2 >= 128, C2 =< 191,
+                C3 >= 128, C3 =< 191,
+                C4 >= 128, C4 =< 191 ->
+            validate_utf8_fast(B, 4 + O);
+        _ ->
+            false
     end.
 
 to_hex([]) ->
@@ -283,17 +303,15 @@ should_flush(MemThreshHold) ->
     true -> false end.
 
 encodeBase64Url(Url) ->
-    Url1 = iolist_to_binary(re:replace(base64:encode(Url), "=+$", "")),
-    Url2 = iolist_to_binary(re:replace(Url1, "/", "_", [global])),
-    iolist_to_binary(re:replace(Url2, "\\+", "-", [global])).
+    Url1 = re:replace(base64:encode(Url), ["=+", $$], ""),
+    Url2 = re:replace(Url1, "/", "_", [global]),
+    re:replace(Url2, "\\+", "-", [global, {return, binary}]).
 
 decodeBase64Url(Url64) ->
-    Url1 = re:replace(iolist_to_binary(Url64), "-", "+", [global]),
-    Url2 = iolist_to_binary(
-        re:replace(iolist_to_binary(Url1), "_", "/", [global])
-    ),
-    Padding = ?l2b(lists:duplicate((4 - size(Url2) rem 4) rem 4, $=)),
-    base64:decode(<<Url2/binary, Padding/binary>>).
+    Url1 = re:replace(Url64, "-", "+", [global]),
+    Url2 = re:replace(Url1, "_", "/", [global]),
+    Padding = lists:duplicate((4 - iolist_size(Url2) rem 4) rem 4, $=),
+    base64:decode(iolist_to_binary([Url2, Padding])).
 
 dict_find(Key, Dict, DefaultValue) ->
     case dict:find(Key, Dict) of
@@ -387,23 +405,6 @@ verify(X, Y) when is_list(X) and is_list(Y) ->
             false
     end;
 verify(_X, _Y) -> false.
-
-compressible_att_type(MimeType) when is_binary(MimeType) ->
-    compressible_att_type(?b2l(MimeType));
-compressible_att_type(MimeType) ->
-    TypeExpList = re:split(
-        couch_config:get("attachments", "compressible_types", ""),
-        ", ?",
-        [{return, list}]
-    ),
-    lists:any(
-        fun(TypeExp) ->
-            Regexp = ["^\\s*", re:replace(TypeExp, "\\*", ".*"),
-                "(?:\\s*;.*?)?\\s*", $$],
-            re:run(MimeType, Regexp, [caseless]) =/= nomatch
-        end,
-        [T || T <- TypeExpList, T /= []]
-    ).
 
 -spec md5(Data::(iolist() | binary())) -> Digest::binary().
 md5(Data) ->
