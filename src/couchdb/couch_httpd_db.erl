@@ -48,6 +48,22 @@ handle_request(#httpd{path_parts=[DbName|RestParts],method=Method,
                 "You tried to DELETE a database with a ?=rev parameter. "
                 ++ "Did you mean to DELETE a document instead?"})
         end;
+    {'OPTIONS', _} ->
+        ?LOG_DEBUG("handle cors preflight db request", []),
+        case couch_db:open_int(DbName, []) of
+        {ok, Db} ->
+            try
+                {SecProps} =  couch_db:get_security(Db),
+                Origins = couch_util:get_value(<<"origins">>, SecProps,
+                    [<<"*">>]),
+                couch_httpd:preflight_cors_headers(Req, Origins)
+            after
+                catch couch_db:close(Db)
+            end;
+        _Error ->
+            couch_httpd:preflight_cors_headers(Req)
+        end,
+        couch_httpd:send_json(Req, {[{ok, true}]});
     {_, []} ->
         do_db_req(Req, fun db_req/2);
     {_, [SecondPart|_]} ->
@@ -200,9 +216,28 @@ delete_db_req(#httpd{user_ctx=UserCtx}=Req, DbName) ->
         throw(Error)
     end.
 
-do_db_req(#httpd{user_ctx=UserCtx,path_parts=[DbName|_]}=Req, Fun) ->
+db_check_origin(#httpd{mochi_req=MochiReq}, Db) ->
+    {SecProps} = couch_db:get_security(Db),
+    AcceptedOrigins = couch_util:get_value(<<"origins">>, SecProps, [<<"*">>]),
+    case MochiReq:get_header_value("Origin") of
+    undefined -> ok;
+    Origin ->
+        case couch_httpd:check_origin(AcceptedOrigins, Origin) of
+        error ->
+            %% reset cors_headers
+            erlang:put(cors_headers, []);
+        Origin1 ->
+            CorsHeaders = [{"Access-Control-Allow-Origin", Origin1},
+                           {"Access-Control-Allow-Credentials", "true"}],
+            erlang:put(cors_headers, CorsHeaders)
+        end
+    end,
+    ok.
+
+do_db_req(#httpd{user_ctx=UserCtx, path_parts=[DbName|_]}=Req, Fun) ->
     case couch_db:open(DbName, [{user_ctx, UserCtx}]) of
     {ok, Db} ->
+        ok = db_check_origin(Req, Db),
         try
             Fun(Req, Db)
         after
@@ -211,6 +246,7 @@ do_db_req(#httpd{user_ctx=UserCtx,path_parts=[DbName|_]}=Req, Fun) ->
     Error ->
         throw(Error)
     end.
+
 
 db_req(#httpd{method='GET',path_parts=[_DbName]}=Req, Db) ->
     {ok, DbInfo} = couch_db:get_db_info(Db),

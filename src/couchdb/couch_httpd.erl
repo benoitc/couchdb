@@ -29,6 +29,8 @@
 -export([send_response/4,send_method_not_allowed/2,send_error/4, send_redirect/2,send_chunked_error/2]).
 -export([send_json/2,send_json/3,send_json/4,last_chunk/1,parse_multipart_request/3]).
 -export([accepted_encodings/1,handle_request_int/5,validate_referer/1,validate_ctype/2]).
+-export([preflight_cors_headers/1, preflight_cors_headers/2,
+        check_origin/2, cors_headers/0]).
 
 start_link() ->
     start_link(http).
@@ -268,7 +270,8 @@ handle_request_int(MochiReq, DefaultFun,
 
     % allow broken HTTP clients to fake a full method vocabulary with an X-HTTP-METHOD-OVERRIDE header
     MethodOverride = MochiReq:get_primary_header_value("X-HTTP-Method-Override"),
-    Method2 = case lists:member(MethodOverride, ["GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT", "COPY"]) of
+    Method2 = case lists:member(MethodOverride, ["GET", "HEAD", "POST",
+                "PUT", "DELETE", "TRACE", "CONNECT", "COPY", "OPTIONS"]) of
     true -> 
         ?LOG_INFO("MethodOverride: ~s (real method was ~s)", [MethodOverride, Method1]),
         case Method1 of
@@ -304,9 +307,19 @@ handle_request_int(MochiReq, DefaultFun,
     HandlerFun = couch_util:dict_find(HandlerKey, UrlHandlers, DefaultFun),
     {ok, AuthHandlers} = application:get_env(couch, auth_handlers),
 
+    % set default CORS headers
+    set_default_cors_headers(MochiReq),
+
     {ok, Resp} =
     try
         case authenticate_request(HttpReq, AuthHandlers) of
+        #httpd{method='OPTIONS'} = Req ->
+            if HandlerFun =:= DefaultFun ->
+                    HandlerFun(Req);
+                true ->
+                    preflight_cors_headers(MochiReq),
+                    send_json(Req, {[{ok, true}]})
+            end;
         #httpd{} = Req ->
             HandlerFun(Req);
         Response ->
@@ -439,7 +452,8 @@ serve_file(Req, RelativePath, DocumentRoot) ->
 serve_file(#httpd{mochi_req=MochiReq}=Req, RelativePath, DocumentRoot, ExtraHeaders) ->
     log_request(Req, 200),
     {ok, MochiReq:serve_file(RelativePath, DocumentRoot,
-        server_header() ++ couch_httpd_auth:cookie_auth_header(Req, []) ++ ExtraHeaders)}.
+        server_header() ++ couch_httpd_auth:cookie_auth_header(Req, []) ++ 
+        cors_headers() ++ ExtraHeaders)}.
 
 qs_value(Req, Key) ->
     qs_value(Req, Key, undefined).
@@ -598,7 +612,9 @@ log_request(#httpd{mochi_req=MochiReq,peer=Peer}, Code) ->
 start_response_length(#httpd{mochi_req=MochiReq}=Req, Code, Headers, Length) ->
     log_request(Req, Code),
     couch_stats_collector:increment({httpd_status_codes, Code}),
-    Resp = MochiReq:start_response_length({Code, Headers ++ server_header() ++ couch_httpd_auth:cookie_auth_header(Req, Headers), Length}),
+    Resp = MochiReq:start_response_length({Code, Headers ++ server_header() ++
+            couch_httpd_auth:cookie_auth_header(Req, Headers) ++
+            couch_httpd:cors_headers(), Length}),
     case MochiReq:get(method) of
     'HEAD' -> throw({http_head_abort, Resp});
     _ -> ok
@@ -609,7 +625,7 @@ start_response(#httpd{mochi_req=MochiReq}=Req, Code, Headers) ->
     log_request(Req, Code),
     couch_stats_collector:increment({httpd_status_cdes, Code}),
     CookieHeader = couch_httpd_auth:cookie_auth_header(Req, Headers),
-    Headers2 = Headers ++ server_header() ++ CookieHeader,
+    Headers2 = Headers ++ server_header() ++ CookieHeader ++ cors_headers(),
     Resp = MochiReq:start_response({Code, Headers2}),
     case MochiReq:get(method) of
         'HEAD' -> throw({http_head_abort, Resp});
@@ -642,7 +658,8 @@ start_chunked_response(#httpd{mochi_req=MochiReq}=Req, Code, Headers) ->
     log_request(Req, Code),
     couch_stats_collector:increment({httpd_status_codes, Code}),
     Headers2 = http_1_0_keep_alive(MochiReq, Headers),
-    Resp = MochiReq:respond({Code, Headers2 ++ server_header() ++ couch_httpd_auth:cookie_auth_header(Req, Headers2), chunked}),
+    Resp = MochiReq:respond({Code, Headers2 ++ server_header() ++
+            couch_httpd_auth:cookie_auth_header(Req, Headers2) ++ cors_headers(), chunked}),
     case MochiReq:get(method) of
     'HEAD' -> throw({http_head_abort, Resp});
     _ -> ok
@@ -668,7 +685,9 @@ send_response(#httpd{mochi_req=MochiReq}=Req, Code, Headers, Body) ->
         ?LOG_DEBUG("httpd ~p error response:~n ~s", [Code, Body]);
     true -> ok
     end,
-    {ok, MochiReq:respond({Code, Headers2 ++ server_header() ++ couch_httpd_auth:cookie_auth_header(Req, Headers2), Body})}.
+    {ok, MochiReq:respond({Code, Headers2 ++ server_header() ++ 
+                couch_httpd_auth:cookie_auth_header(Req, Headers2) 
+                ++ cors_headers(), Body})}.
 
 send_method_not_allowed(Req, Methods) ->
     send_error(Req, 405, [{"Allow", Methods}], <<"method_not_allowed">>, ?l2b("Only " ++ Methods ++ " allowed")).
@@ -1058,3 +1077,132 @@ partial_find(B, D, N, K) ->
     end.
 
 
+set_default_cors_headers(MochiReq) ->
+    case MochiReq:get_header_value("Origin") of
+    undefined -> ok;
+    Origin ->
+        erlang:put(cors_headers, default_origin_headers(Origin))
+    end.
+
+default_origin_headers(Origin) ->
+    [{"Access-Control-Allow-Origin", Origin},
+     {"Access-Control-Allow-Credentials", "true"}].
+
+preflight_cors_headers(MochiReq) ->
+    preflight_cors_headers(MochiReq, ["*"]).
+
+
+preflight_cors_headers(#httpd{mochi_req=MochiReq}, AcceptedOrigins) ->
+    preflight_cors_headers(MochiReq, AcceptedOrigins);
+preflight_cors_headers(MochiReq, AcceptedOrigins) ->
+    SupportedMethods = ["GET", "HEAD", "POST", "PUT",
+            "DELETE", "TRACE", "CONNECT", "COPY", "OPTIONS"],
+
+    SimpleHeaders = ["Accept", "Accept-Language", "Content-Type",
+        "Expires", "Last-Modified", "Pragma", "Origin"],
+
+    CouchHeaders = ["Content-Length", "If-Match", "Destination",
+        "X-Requested-With", "X-Http-Method-Override", "X-Couch-Auth-Key",
+        "X-Upondata-Api-Key", "Content-Range"],
+
+    AllSupportedHeaders = SimpleHeaders ++ CouchHeaders,
+    SupportedHeaders = [string:to_lower(H) || H <- AllSupportedHeaders],
+    MaxAge = list_to_integer(
+        couch_config:get("cors", "max_age", "1000")
+    ),
+
+    %% reset cors_headers
+    erlang:put(cors_headers, []),
+
+    case MochiReq:get_header_value("Origin") of
+    undefined -> ok;
+    Origin ->
+        %% if origin validate it against accepted origin
+        case check_origin(AcceptedOrigins, Origin) of
+        error -> ok; %% don't set any preflight header
+        Origin1 ->
+            ?LOG_DEBUG("check preflight cors request", []), 
+            %% now check the reqquested method
+            case MochiReq:get_header_value(
+                        "Access-Control-Request-Method") of
+            undefined -> 
+                set_prefilight_headers(Origin1, MaxAge,
+                            SupportedMethods,
+                            nil);
+            Method ->
+                case lists:member(Method, SupportedMethods) of
+                true ->
+                    %% method ok , check headers
+                    {FinalReqHeaders, ReqHeaders} = case MochiReq:get_header_value(
+                            "Access-Control-Request-Headers") of
+                        undefined -> {"", []};
+                        Headers ->
+                            %% transform header list in something we
+                            %% could check. make sure everything is a
+                            %% list 
+
+                            RH = [string:to_lower(H) || H <- re:split(Headers, ",\\s*",
+                                [{return,list},trim])],
+                            {Headers, RH}
+                    end,
+
+                    %% check if headers are supported
+                    case ReqHeaders -- SupportedHeaders of
+                    [] ->
+                        %% everything is supported set preflight headers
+                        set_prefilight_headers(Origin1, MaxAge,
+                            SupportedMethods,
+                            FinalReqHeaders);
+                    _ -> ok
+                    end;
+                false -> ok
+                end
+            end
+        end
+    end.
+
+check_origin(AcceptedOrigins0, Origin) ->
+    AcceptedOrigins = [couch_util:to_list(A) || A <- AcceptedOrigins0],
+    case lists:member("*", AcceptedOrigins) of
+        true -> Origin;
+        false -> check_origin1(AcceptedOrigins, Origin)
+    end.
+
+check_origin1([], _O) ->
+    error;
+check_origin1([A|R], O) ->
+    {SO, NO, _, _, _} = mochiweb_util:urlsplit(O),
+    {S, N, _, _, _} = mochiweb_util:urlsplit(A),
+
+    HO = {string:to_lower(SO), string:to_lower(NO)},
+    HA =  {string:to_lower(S), string:to_lower(N)},
+
+    if HO == HA -> O;
+            true ->check_origin1(R, O)
+    end.
+
+set_prefilight_headers(Origin, MaxAge, SupportedMethods,
+    nil) ->
+    PreflightHeaders = [
+            {"Access-Control-Allow-Origin", Origin},
+            {"Access-Control-Allow-Credentials", "true"},
+            {"Access-Control-Max-Age", MaxAge},
+            {"Access-Control-Allow-Methods",
+                string:join(SupportedMethods, ", ")}],
+        erlang:put(cors_headers, PreflightHeaders);
+set_prefilight_headers(Origin, MaxAge, SupportedMethods,
+    SupportedHeaders) ->
+        PreflightHeaders = [
+            {"Access-Control-Allow-Origin", Origin},
+            {"Access-Control-Allow-Credentials", "true"},
+            {"Access-Control-Max-Age", MaxAge},
+            {"Access-Control-Allow-Methods",
+                string:join(SupportedMethods, ", ")},
+            {"Access-Control-ALlow-Headers", SupportedHeaders}],
+        erlang:put(cors_headers, PreflightHeaders).
+
+cors_headers() ->
+    case erlang:get(cors_headers) of 
+        undefined -> []; 
+        Headers -> Headers 
+    end.
