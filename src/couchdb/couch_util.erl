@@ -19,6 +19,7 @@
 -export([encodeBase64Url/1, decodeBase64Url/1]).
 -export([validate_utf8/1, to_hex/1, parse_term/1, dict_find/3]).
 -export([get_nested_json_value/2, json_user_ctx/1]).
+-export([json_encode/1, json_decode/1]).
 -export([proplist_apply_field/2, json_apply_field/2]).
 -export([to_binary/1, to_integer/1, to_list/1, url_encode/1]).
 -export([verify/2,simple_call/2,shutdown_sync/1]).
@@ -164,6 +165,18 @@ get_nested_json_value(Value, []) ->
     Value;
 get_nested_json_value(_NotJSONObj, _) ->
     throw({not_found, json_mismatch}).
+
+json_encode(V) ->
+    Handler =
+    fun
+        ({L}) when is_list(L) -> {struct,L};
+        (Bad) -> exit({json_encode, {bad_term, Bad}})
+    end,
+    (mochijson2:encoder([{handler, Handler}]))(V).
+
+json_decode(V) ->
+    try (mochijson2:decoder([{object_hook, fun({struct,L}) -> {L} end}]))(V)
+    catch _:_ -> throw({invalid_json,V}) end.
 
 proplist_apply_field(H, L) ->
     {R} = json_apply_field(H, {L}),

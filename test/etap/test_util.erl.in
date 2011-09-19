@@ -27,7 +27,6 @@ init_code_path() ->
     Paths = [
         "etap",
         "couchdb",
-        "ejson",
         "erlang-oauth",
         "ibrowse",
         "mochiweb",

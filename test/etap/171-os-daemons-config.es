@@ -20,11 +20,11 @@ read() ->
         eof ->
             stop;
         Data ->
-            ejson:decode(Data)
+            jiffy:decode(Data)
     end.
 
 write(Mesg) ->
-    Data = iolist_to_binary(ejson:encode(Mesg)),
+    Data = iolist_to_binary(jiffy:encode(Mesg)),
     io:format(binary_to_list(Data) ++ "\n", []).
 
 get_cfg(Section) ->

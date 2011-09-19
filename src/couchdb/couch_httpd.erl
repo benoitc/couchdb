@@ -319,7 +319,8 @@ handle_request_int(MochiReq, DefaultFun,
         throw:{invalid_json, S} ->
             ?LOG_ERROR("attempted upload of invalid JSON (set log_level to debug to log it)", []),
             ?LOG_DEBUG("Invalid JSON: ~p",[S]),
-            send_error(HttpReq, {bad_request, io_lib:format("invalid UTF-8 JSON: ~p",[S])});
+            Msg = io_lib:format("Invalid JSON: ~p", [S]),
+            send_error(HttpReq, {bad_request, Msg});
         throw:unacceptable_encoding ->
             ?LOG_ERROR("unsupported encoding method for the response", []),
             send_error(HttpReq, {not_acceptable, "unsupported encoding"});
@@ -334,20 +335,24 @@ handle_request_int(MochiReq, DefaultFun,
             ?LOG_ERROR("~s", [ErrorReason]),
             send_error(HttpReq, {bad_otp_release, ErrorReason});
         throw:Error ->
+            Stack = erlang:get_stacktrace(),
             ?LOG_DEBUG("Minor error in HTTP request: ~p",[Error]),
-            ?LOG_DEBUG("Stacktrace: ~p",[erlang:get_stacktrace()]),
+            ?LOG_DEBUG("Stacktrace: ~p",[Stack]),
             send_error(HttpReq, Error);
         error:badarg ->
+            Stack = erlang:get_stacktrace(),
             ?LOG_ERROR("Badarg error in HTTP request",[]),
-            ?LOG_INFO("Stacktrace: ~p",[erlang:get_stacktrace()]),
+            ?LOG_DEBUG("Stacktrace: ~p",[Stack]),
             send_error(HttpReq, badarg);
         error:function_clause ->
+            Stack = erlang:get_stacktrace(),
             ?LOG_ERROR("function_clause error in HTTP request",[]),
-            ?LOG_INFO("Stacktrace: ~p",[erlang:get_stacktrace()]),
+            ?LOG_DEBUG("Stacktrace: ~p",[Stack]),
             send_error(HttpReq, function_clause);
         Tag:Error ->
+            Stack = erlang:get_stacktrace(),
             ?LOG_ERROR("Uncaught error in HTTP request: ~p",[{Tag, Error}]),
-            ?LOG_INFO("Stacktrace: ~p",[erlang:get_stacktrace()]),
+            ?LOG_DEBUG("Stacktrace: ~p",[Stack]),
             send_error(HttpReq, Error)
     end,
     RequestTime = round(timer:now_diff(now(), Begin)/1000),

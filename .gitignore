@@ -71,6 +71,10 @@ src/ejson/ejson.app
 src/ejson/.deps/
 src/ejson/.libs/
 src/ejson/priv
+src/jiffy/.deps
+src/jiffy/.libs
+src/jiffy/ebin
+src/jiffy/priv
 src/mochiweb/mochiweb.app
 src/snappy/.deps/
 src/snappy/.libs/

@@ -347,7 +347,12 @@ fi
 otp_release="`${ERL} -noshell -eval 'io:put_chars(erlang:system_info(otp_release)).' -s erlang halt`"
 AC_SUBST(otp_release)
 AM_CONDITIONAL([USE_OTP_NIFS], [test x$otp_release \> xR13B03])
+AM_CONDITIONAL([USE_JIFFY], [test x$otp_release \> xR14A])
 AM_CONDITIONAL([USE_EJSON_COMPARE_NIF], [test x$otp_release \> xR14B03])
+
+if test x$otp_release \> xR14A; then
+    ERLC_FLAGS="$ERLC_FLAGS -DUSE_JIFFY"
+fi
 
 has_crypto=`${ERL} -eval "case application:load(crypto) of ok -> ok; _ -> exit(no_crypto) end." -noshell -s init stop`
 
@@ -511,6 +516,7 @@ AC_CONFIG_FILES([src/couchdb/priv/Makefile])
 AC_CONFIG_FILES([src/erlang-oauth/Makefile])
 AC_CONFIG_FILES([src/etap/Makefile])
 AC_CONFIG_FILES([src/ibrowse/Makefile])
+AC_CONFIG_FILES([src/jiffy/Makefile])
 AC_CONFIG_FILES([src/mochiweb/Makefile])
 AC_CONFIG_FILES([src/snappy/Makefile])
 AC_CONFIG_FILES([src/snappy/google-snappy/snappy-stubs-public.h])

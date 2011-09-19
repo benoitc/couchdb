@@ -1,0 +1,7 @@
+{application, jiffy, [
+    {description, "JSON Decoder/Encoder."},
+    {vsn, "@version@"},
+    {modules, [jiffy, jiffy_test_util]},
+    {registered, []},
+    {applications, [kernel, stdlib]}
+]}.

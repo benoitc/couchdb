@@ -94,6 +94,7 @@
 ^src/ejson/*
 ^src/etap/*
 ^src/ibrowse/*
+^src/jiffy/*
 ^src/mochiweb/*
 ^src/snappy/*
 ^stamp-h1

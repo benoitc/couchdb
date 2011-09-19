@@ -135,7 +135,7 @@ query_view_before_restore_backup() ->
     {ok, Code, _Headers, Body} = test_util:request(
         db_url() ++ "/_design/foo/_view/bar", [], get),
     etap:is(Code, 200, "Got view response before restoring backup."),
-    ViewJson = ejson:decode(Body),
+    ViewJson = jiffy:decode(Body),
     Rows = couch_util:get_nested_json_value(ViewJson, [<<"rows">>]),
     HasDoc1 = has_doc("doc1", Rows),
     HasDoc2 = has_doc("doc2", Rows),
@@ -170,7 +170,7 @@ query_view_after_restore_backup() ->
     {ok, Code, _Headers, Body} = test_util:request(
         db_url() ++ "/_design/foo/_view/bar", [], get),
     etap:is(Code, 200, "Got view response after restoring backup."),
-    ViewJson = ejson:decode(Body),
+    ViewJson = jiffy:decode(Body),
     Rows = couch_util:get_nested_json_value(ViewJson, [<<"rows">>]),
     HasDoc1 = has_doc("doc1", Rows),
     HasDoc2 = has_doc("doc2", Rows),

@@ -169,7 +169,7 @@ wait_view_compact_done(N) ->
         200 -> ok;
         _ -> etap:bail("Invalid view group info.")
     end,
-    {Info} = ejson:decode(Body),
+    {Info} = jiffy:decode(Body),
     {IndexInfo} = couch_util:get_value(<<"view_index">>, Info),
     CompactRunning = couch_util:get_value(<<"compact_running">>, IndexInfo),
     case CompactRunning of

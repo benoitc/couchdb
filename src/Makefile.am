@@ -18,5 +18,6 @@ SUBDIRS = \
     erlang-oauth \
     etap \
     ibrowse \
+    jiffy \
     mochiweb \
     snappy
