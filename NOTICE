@@ -62,10 +62,6 @@ This product also includes the following third-party components:
 
   Copyright 2011, Paul J. Davis
  
- * yajl (http://lloyd.github.com/yajl/)
-
-  Copyright 2010, Lloyd Hilaiel
-
  * snappy (http://code.google.com/p/snappy/)
 
   Copyright 2005 and onwards Google Inc.

@@ -14,7 +14,6 @@ SUBDIRS = \
     couch_index \
     couch_mrview \
     couchdb \
-    ejson \
     erlang-oauth \
     etap \
     ibrowse \
