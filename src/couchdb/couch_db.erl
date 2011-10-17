@@ -71,20 +71,36 @@ create(DbName, Options) ->
 % this is for opening a database for internal purposes like the replicator
 % or the view indexer. it never throws a reader error.
 open_int(DbName, Options) ->
-    couch_server:open(DbName, Options).
+    case couch_server:open(DbName, Options) of
+        {ok, Db} ->
+            case is_dropbox(Db) of
+                true ->
+                    {ok, Db#db{dropbox=true}};
+                false ->
+                    {ok, Db}
+            end;
+        Else ->
+            Else
+    end.
+
 
 % this should be called anytime an http request opens the database.
 % it ensures that the http userCtx is a valid reader
 open(DbName, Options) ->
     case couch_server:open(DbName, Options) of
         {ok, Db} ->
-            try
-                check_is_member(Db),
-                {ok, Db}
-            catch
-                throw:Error ->
-                    close(Db),
-                    throw(Error)
+            case is_dropbox(Db) of
+            true ->
+                {ok, Db#db{dropbox=true}};
+            false ->
+                try
+                    check_is_member(Db),
+                    {ok, Db}
+                catch
+                    throw:Error ->
+                        close(Db),
+                        throw(Error)
+                end
             end;
         Else -> Else
     end.
@@ -99,7 +115,12 @@ reopen(#db{main_pid = Pid, fd_ref_counter = OldRefCntr, user_ctx = UserCtx}) ->
         couch_ref_counter:add(NewRefCntr),
         catch couch_ref_counter:drop(OldRefCntr)
     end,
-    {ok, NewDb#db{user_ctx = UserCtx}}.
+    case is_dropbox(NewDb) of
+        true ->
+            {ok, NewDb#db{user_ctx = UserCtx, dropbox=true}};
+        false ->
+            {ok, NewDb#db{user_ctx = UserCtx}}
+    end.
 
 ensure_full_commit(#db{update_pid=UpdatePid,instance_start_time=StartTime}) ->
     ok = gen_server:call(UpdatePid, full_commit, infinity),
@@ -134,6 +155,7 @@ open_doc(Db, IdOrDocInfo) ->
     open_doc(Db, IdOrDocInfo, []).
 
 open_doc(Db, Id, Options) ->
+    maybe_open_doc(Db, Id),
     increment_stat(Db, {couchdb, database_reads}),
     case open_doc_int(Db, Id, Options) of
     {ok, #doc{deleted=true}=Doc} ->
@@ -179,6 +201,7 @@ find_ancestor_rev_pos({RevPos, [RevId|Rest]}, AttsSinceRevs) ->
     end.
 
 open_doc_revs(Db, Id, Revs, Options) ->
+    maybe_open_doc(Db, Id),
     increment_stat(Db, {couchdb, database_reads}),
     [{ok, Results}] = open_doc_revs_int(Db, [{Id, Revs}], Options),
     {ok, [apply_open_options(Result, Options) || Result <- Results]}.
@@ -356,6 +379,11 @@ check_is_member(#db{user_ctx=#user_ctx{name=Name,roles=Roles}=UserCtx}=Db) ->
         end
     end.
 
+maybe_open_doc(#db{dropbox=true}=Db, _DocId) ->
+    check_is_admin(Db);
+maybe_open_doc(_Db, _DocId) ->
+    ok.
+
 get_admins(#db{security=SecProps}) ->
     couch_util:get_value(<<"admins">>, SecProps, {[]}).
 
@@ -363,6 +391,9 @@ get_members(#db{security=SecProps}) ->
     % we fallback to readers here for backwards compatibility
     couch_util:get_value(<<"members">>, SecProps,
         couch_util:get_value(<<"readers">>, SecProps, {[]})).
+
+is_dropbox(#db{security=SecProps}) ->
+    couch_util:get_value(<<"dropbox">>, SecProps, false).
 
 get_security(#db{security=SecProps}) ->
     {SecProps}.

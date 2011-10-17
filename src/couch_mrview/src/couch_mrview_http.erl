@@ -99,7 +99,13 @@ handle_cleanup_req(Req, _Db) ->
     couch_httpd:send_method_not_allowed(Req, "POST").
 
 
-all_docs_req(Req, Db, Keys) ->
+all_docs_req(Req, #db{dropbox=Dropbox}=Db, Keys) ->
+    case Dropbox of
+        true ->
+            couch_db:check_is_admin(Db);
+        false ->
+            ok
+    end,
     Args0 = parse_qs(Req, Keys),
     ETagFun = fun(Sig, Acc0) ->
         ETag = couch_httpd:make_etag(Sig),

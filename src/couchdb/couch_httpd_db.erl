@@ -63,7 +63,14 @@ handle_changes_req(#httpd{method='GET'}=Req, Db) ->
 handle_changes_req(#httpd{path_parts=[_,<<"_changes">>]}=Req, _Db) ->
     send_method_not_allowed(Req, "GET,HEAD,POST").
 
-handle_changes_req1(Req, Db) ->
+handle_changes_req1(Req, #db{dropbox=Dropbox}=Db) ->
+    case Dropbox of
+        true ->
+            couch_db:check_is_admin(Db);
+        false ->
+            ok
+    end,
+
     MakeCallback = fun(Resp) ->
         fun({change, Change, _}, "continuous") ->
             send_chunk(Resp, [?JSON_ENCODE(Change) | "\n"]);

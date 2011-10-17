@@ -188,7 +188,8 @@
     revs_limit = 1000,
     fsync_options = [],
     options = [],
-    compression
+    compression,
+    dropbox=false
     }).
 
 
