@@ -10,51 +10,33 @@
 % License for the specific language governing permissions and limitations under
 % the License.
 
--module(couch_primary_sup).
+-module(couch_replicator_sup).
 -behaviour(supervisor).
 -export([init/1, start_link/0]).
 
+
 start_link() ->
-    supervisor:start_link({local,couch_primary_services}, ?MODULE, []).
+    supervisor:start_link({local,?MODULE}, ?MODULE, []).
 
 init([]) ->
     Children = [
-        {collation_driver,
-            {couch_drv, start_link, []},
-            permanent,
-            infinity,
-            supervisor,
-            [couch_drv]},
-        {couch_task_status,
-            {couch_task_status, start_link, []},
-            permanent,
-            brutal_kill,
-            worker,
-            [couch_task_status]},
-        {couch_server,
-            {couch_server, sup_start_link, []},
-            permanent,
-            brutal_kill,
-            worker,
-            [couch_server]},
-        {couch_db_update_event,
-            {gen_event, start_link, [{local, couch_db_update}]},
+        {couch_replication_event,
+            {gen_event, start_link, [{local, couch_replication}]},
             permanent,
             brutal_kill,
             worker,
             dynamic},
-        {couch_replicator,
-            {couch_replicator_sup, start_link, []},
+        {couch_replication_supervisor,
+            {couch_replicator_tasks_sup, start_link, []},
             permanent,
             infinity,
             supervisor,
-            [couch_replicator_sup]},
-        {couch_log,
-            {couch_log, start_link, []},
+            [couch_replicator_tasks_sup]},
+        {couch_replicator_manager,
+            {couch_replicator_manager, start_link, []},
             permanent,
             brutal_kill,
             worker,
-            [couch_log]}
+            [couch_replicator_manager]}
     ],
     {ok, {{one_for_one, 10, 3600}, Children}}.
-

@@ -10,7 +10,7 @@
 % License for the specific language governing permissions and limitations under
 % the License.
 
--module(couch_rep_sup).
+-module(couch_replicator_tasks_sup).
 -behaviour(supervisor).
 -export([init/1, start_link/0]).
 

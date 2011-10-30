@@ -10,6 +10,24 @@
 % License for the specific language governing permissions and limitations under
 % the License.
 
+-define(REP_ID_VERSION, 2).
+
+-record(rep, {
+    id,
+    source,
+    target,
+    options,
+    user_ctx,
+    doc_id
+}).
+
+-record(rep_stats, {
+    missing_checked = 0,
+    missing_found = 0,
+    docs_read = 0,
+    docs_written = 0,
+    doc_write_failures = 0
+}).
 
 
 -record(httpdb, {

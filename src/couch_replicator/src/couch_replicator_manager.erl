@@ -10,7 +10,7 @@
 % License for the specific language governing permissions and limitations under
 % the License.
 
--module(couch_replication_manager).
+-module(couch_replicator_manager).
 -behaviour(gen_server).
 
 % public API
@@ -21,8 +21,8 @@
 -export([code_change/3, terminate/2]).
 
 -include("couch_db.hrl").
--include("couch_replicator.hrl").
--include("couch_js_functions.hrl").
+-include_lib("couch_replicator/include/couch_replicator.hrl").
+-include("couch_replicator_js_functions.hrl").
 
 -define(DOC_TO_REP, couch_rep_doc_id_to_rep_id).
 -define(REP_TO_STATE, couch_rep_id_to_rep_state).
