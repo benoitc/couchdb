@@ -28,6 +28,7 @@
         couch_replicator_worker
     ]},
     {registered, [
+        couch_replication_manager,
         couch_replicator_tasks_sup
     ]},
     {applications, [kernel, stdlib]},

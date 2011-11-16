@@ -26,7 +26,7 @@ init([]) ->
             brutal_kill,
             worker,
             dynamic},
-        {couch_replication_supervisor,
+        {couch_replicator_tasks_sup,
             {couch_replicator_tasks_sup, start_link, []},
             permanent,
             infinity,
