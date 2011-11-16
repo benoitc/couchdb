@@ -23,7 +23,7 @@ include_files = \
 
 source_files = \
 	src/couch_replicator_app.src \
-    src/couch_replicator.erl \
+	src/couch_replicator.erl \
 	src/couch_replicator_api.erl \
 	src/couch_replicator_app.erl \
 	src/couch_replicator_httpc_pool.erl \
@@ -37,13 +37,13 @@ source_files = \
 	src/couch_replicator_worker.erl
 
 test_files = \
-    test/001-httpc-pool.t \
-    test/002-replication-compact.t \
-    test/003-replication-large-atts.t
+	test/001-httpc-pool.t \
+	test/002-replication-compact.t \
+	test/003-replication-large-atts.t
 
 compiled_files = \
 	ebin/couch_replicator.app \
-    ebin/couch_replicator.beam \
+	ebin/couch_replicator.beam \
 	ebin/couch_replicator_api.beam \
 	ebin/couch_replicator_app.beam \
 	ebin/couch_replicator_httpc_pool.beam \
