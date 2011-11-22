@@ -277,7 +277,38 @@ get_last_purged(#db{header=#db_header{purged_docs=nil}}) ->
 get_last_purged(#db{fd=Fd, header=#db_header{purged_docs=PurgedPointer}}) ->
     couch_file:pread_term(Fd, PurgedPointer).
 
+
+get_db_info(Db=#db{dropbox=true}) ->
+    case catch(check_is_admin(Db)) of
+    {unauthorized, _} ->
+        get_db_info1(Db, false);
+    _Else ->
+        ?LOG_INFO("mmm ~p~n", [_Else]),
+        get_db_info1(Db, true)
+    end;
 get_db_info(Db) ->
+    get_db_info1(Db, true).
+
+get_db_info1(Db, false) ->
+    #db{header=#db_header{disk_version=DiskVersion},
+        name=Name,
+        instance_start_time=StartTime
+    } = Db,
+    InfoList = [
+        {db_name, Name},
+        {doc_count, 0},
+        {doc_del_count, 0},
+        {update_seq, 0},
+        {purge_seq, 0},
+        {compact_running, false},
+        {disk_size, 0},
+        {data_size, 0},
+        {instance_start_time, StartTime},
+        {disk_format_version, DiskVersion},
+        {committed_update_seq, 0}
+        ],
+    {ok, InfoList};
+get_db_info1(Db, true) ->
     #db{fd=Fd,
         header=#db_header{disk_version=DiskVersion},
         compactor_pid=Compactor,
