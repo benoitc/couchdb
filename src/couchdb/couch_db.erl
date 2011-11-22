@@ -283,7 +283,6 @@ get_db_info(Db=#db{dropbox=true}) ->
     {unauthorized, _} ->
         get_db_info1(Db, false);
     _Else ->
-        ?LOG_INFO("mmm ~p~n", [_Else]),
         get_db_info1(Db, true)
     end;
 get_db_info(Db) ->
