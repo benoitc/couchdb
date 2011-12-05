@@ -11,6 +11,7 @@
 ## the License.
 
 SUBDIRS = \
+	couch_httpd \
     couch_index \
     couch_mrview \
     couch_replicator \

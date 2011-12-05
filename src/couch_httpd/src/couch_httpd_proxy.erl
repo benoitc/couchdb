@@ -14,7 +14,7 @@
 -export([handle_proxy_req/2]).
 
 -include("couch_db.hrl").
--include("../ibrowse/ibrowse.hrl").
+-include_lib("ibrowse/ibrowse.hrl").
 
 -define(TIMEOUT, infinity).
 -define(PKT_SIZE, 4096).

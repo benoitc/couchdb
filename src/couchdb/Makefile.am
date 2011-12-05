@@ -46,16 +46,6 @@ source_files = \
     couch_external_manager.erl \
     couch_external_server.erl \
     couch_file.erl \
-    couch_httpd.erl \
-    couch_httpd_db.erl \
-    couch_httpd_auth.erl \
-    couch_httpd_oauth.erl \
-    couch_httpd_external.erl \
-    couch_httpd_misc_handlers.erl \
-    couch_httpd_proxy.erl \
-    couch_httpd_rewrite.erl \
-    couch_httpd_stats_handlers.erl \
-    couch_httpd_vhost.erl \
     couch_key_tree.erl \
     couch_log.erl \
     couch_native_process.erl \
@@ -100,16 +90,6 @@ compiled_files = \
     couch_external_manager.beam \
     couch_external_server.beam \
     couch_file.beam \
-    couch_httpd.beam \
-    couch_httpd_db.beam \
-    couch_httpd_auth.beam \
-    couch_httpd_oauth.beam \
-    couch_httpd_proxy.beam \
-    couch_httpd_external.beam \
-    couch_httpd_misc_handlers.beam \
-    couch_httpd_rewrite.beam \
-    couch_httpd_stats_handlers.beam \
-    couch_httpd_vhost.beam \
     couch_key_tree.beam \
     couch_log.beam \
     couch_native_process.beam \
