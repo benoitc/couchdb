@@ -70,6 +70,9 @@
 ^share/www/style/jquery-ui-1.8.11.custom.css
 ^src/Makefile
 ^src/Makefile.in
+^src/couch_changes/Makefile
+^src/couch_changes/Makefile.in
+^src/couch_changes/ebin/.*beam
 ^src/couch_httpd/Makefile
 ^src/couch_httpd/Makefile.in
 ^src/couch_httpd/ebin/.*beam

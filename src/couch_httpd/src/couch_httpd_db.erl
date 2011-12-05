@@ -15,7 +15,7 @@
 -include_lib("couch_httpd/include/couch_httpd.hrl").
 
 -export([handle_request/1, handle_compact_req/2, handle_design_req/2,
-    db_req/2, couch_doc_open/4,handle_changes_req/2,
+    db_req/2, couch_doc_open/4,
     update_doc_result_to_json/1, update_doc_result_to_json/2,
     handle_design_info_req/3]).
 
@@ -54,76 +54,6 @@ handle_request(#httpd{path_parts=[DbName|RestParts],method=Method,
     {_, [SecondPart|_]} ->
         Handler = couch_util:dict_find(SecondPart, DbUrlHandlers, fun db_req/2),
         do_db_req(Req, Handler)
-    end.
-
-handle_changes_req(#httpd{method='POST'}=Req, Db) ->
-    couch_httpd:validate_ctype(Req, "application/json"),
-    handle_changes_req1(Req, Db);
-handle_changes_req(#httpd{method='GET'}=Req, Db) ->
-    handle_changes_req1(Req, Db);
-handle_changes_req(#httpd{path_parts=[_,<<"_changes">>]}=Req, _Db) ->
-    send_method_not_allowed(Req, "GET,HEAD,POST").
-
-handle_changes_req1(Req, Db) ->
-    MakeCallback = fun(Resp) ->
-        fun({change, Change, _}, "continuous") ->
-            send_chunk(Resp, [?JSON_ENCODE(Change) | "\n"]);
-        ({change, Change, Prepend}, _) ->
-            send_chunk(Resp, [Prepend, ?JSON_ENCODE(Change)]);
-        (start, "continuous") ->
-            ok;
-        (start, _) ->
-            send_chunk(Resp, "{\"results\":[\n");
-        ({stop, EndSeq}, "continuous") ->
-            send_chunk(
-                Resp,
-                [?JSON_ENCODE({[{<<"last_seq">>, EndSeq}]}) | "\n"]
-            ),
-            end_json_response(Resp);
-        ({stop, EndSeq}, _) ->
-            send_chunk(
-                Resp,
-                io_lib:format("\n],\n\"last_seq\":~w}\n", [EndSeq])
-            ),
-            end_json_response(Resp);
-        (timeout, _) ->
-            send_chunk(Resp, "\n")
-        end
-    end,
-    ChangesArgs = parse_changes_query(Req),
-    ChangesFun = couch_changes:handle_changes(ChangesArgs, Req, Db),
-    WrapperFun = case ChangesArgs#changes_args.feed of
-    "normal" ->
-        {ok, Info} = couch_db:get_db_info(Db),
-        CurrentEtag = couch_httpd:make_etag(Info),
-        fun(FeedChangesFun) ->
-            couch_httpd:etag_respond(
-                Req,
-                CurrentEtag,
-                fun() ->
-                    {ok, Resp} = couch_httpd:start_json_response(
-                         Req, 200, [{"ETag", CurrentEtag}]
-                    ),
-                    FeedChangesFun(MakeCallback(Resp))
-                end
-            )
-        end;
-    _ ->
-        % "longpoll" or "continuous"
-        {ok, Resp} = couch_httpd:start_json_response(Req, 200),
-        fun(FeedChangesFun) ->
-            FeedChangesFun(MakeCallback(Resp))
-        end
-    end,
-    couch_stats_collector:increment(
-        {httpd, clients_requesting_changes}
-    ),
-    try
-        WrapperFun(ChangesFun)
-    after
-    couch_stats_collector:decrement(
-        {httpd, clients_requesting_changes}
-    )
     end.
 
 handle_compact_req(#httpd{method='POST'}=Req, Db) ->
@@ -1202,36 +1132,6 @@ parse_doc_query(Req) ->
             Args
         end
     end, #doc_query_args{}, couch_httpd:qs(Req)).
-
-parse_changes_query(Req) ->
-    lists:foldl(fun({Key, Value}, Args) ->
-        case {Key, Value} of
-        {"feed", _} ->
-            Args#changes_args{feed=Value};
-        {"descending", "true"} ->
-            Args#changes_args{dir=rev};
-        {"since", _} ->
-            Args#changes_args{since=list_to_integer(Value)};
-        {"limit", _} ->
-            Args#changes_args{limit=list_to_integer(Value)};
-        {"style", _} ->
-            Args#changes_args{style=list_to_existing_atom(Value)};
-        {"heartbeat", "true"} ->
-            Args#changes_args{heartbeat=true};
-        {"heartbeat", _} ->
-            Args#changes_args{heartbeat=list_to_integer(Value)};
-        {"timeout", _} ->
-            Args#changes_args{timeout=list_to_integer(Value)};
-        {"include_docs", "true"} ->
-            Args#changes_args{include_docs=true};
-        {"conflicts", "true"} ->
-            Args#changes_args{conflicts=true};
-        {"filter", _} ->
-            Args#changes_args{filter=Value};
-        _Else -> % unknown key value pair, ignore.
-            Args
-        end
-    end, #changes_args{}, couch_httpd:qs(Req)).
 
 extract_header_rev(Req, ExplicitRev) when is_binary(ExplicitRev) or is_list(ExplicitRev)->
     extract_header_rev(Req, couch_doc:parse_rev(ExplicitRev));

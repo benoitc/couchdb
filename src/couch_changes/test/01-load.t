@@ -18,36 +18,7 @@
 main(_) ->
     test_util:init_code_path(),
     Modules = [
-        couch_auth_cache,
-        couch_btree,
-        couch_compress,
-        couch_config,
-        couch_config_writer,
-        couch_db,
-        couch_db_update_notifier,
-        couch_db_update_notifier_sup,
-        couch_db_updater,
-        couch_doc,
-        % Fails unless couch_config gen_server is started.
-        % couch_ejson_compare,
-        couch_event_sup,
-        couch_external_manager,
-        couch_external_server,
-        couch_file,
-        couch_key_tree,
-        couch_log,
-        couch_os_process,
-        couch_query_servers,
-        couch_ref_counter,
-        couch_server,
-        couch_server_sup,
-        couch_stats_aggregator,
-        couch_stats_collector,
-        couch_stream,
-        couch_task_status,
-        couch_util,
-        couch_work_queue,
-        json_stream_parse
+        couch_changes
     ],
 
     etap:plan(length(Modules)),
