@@ -20,6 +20,7 @@
 
 -include("couch_db.hrl").
 -include("couch_replicator_api_wrap.hrl").
+-include_lib("couch_httpd/include/couch_httpd.hrl").
 
 -export([
     db_open/2,

@@ -21,6 +21,7 @@
 
 
 -include("couch_db.hrl").
+-include_lib("couch_httpd/include/couch_httpd.hrl").
 
 -import(couch_httpd,
     [send_json/2,send_json/3,send_json/4,send_method_not_allowed/2,

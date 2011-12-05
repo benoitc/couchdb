@@ -24,6 +24,7 @@
 
 
 -include("couch_db.hrl").
+-include_lib("couch_httpd/include/couch_httpd.hrl").
 -include_lib("couch_mrview/include/couch_mrview.hrl").
 
 

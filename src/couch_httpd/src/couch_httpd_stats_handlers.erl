@@ -12,6 +12,7 @@
 
 -module(couch_httpd_stats_handlers).
 -include("couch_db.hrl").
+-include_lib("couch_httpd/include/couch_httpd.hrl").
 
 -export([handle_stats_req/1]).
 -import(couch_httpd, [

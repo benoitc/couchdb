@@ -14,7 +14,8 @@
 
 -include("couch_db.hrl").
 -include("couch_replicator_api_wrap.hrl").
--include("../ibrowse/ibrowse.hrl").
+-include_lib("ibrowse/ibrowse.hrl").
+-include_lib("couch_httpd/include/couch_httpd.hrl").
 
 -export([setup/1]).
 -export([send_req/3]).

@@ -13,6 +13,7 @@
 -module(couch_replicator_httpd).
 
 -include("couch_db.hrl").
+-include_lib("couch_httpd/include/couch_httpd.hrl").
 
 -import(couch_httpd, [
     send_json/2,

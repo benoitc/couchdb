@@ -12,6 +12,7 @@
 
 -module(couch_httpd_oauth).
 -include("couch_db.hrl").
+-include_lib("couch_httpd/include/couch_httpd.hrl").
 
 -export([oauth_authentication_handler/1, handle_oauth_req/1, consumer_lookup/2]).
 

@@ -12,6 +12,7 @@
 
 -module(couch_httpd_db).
 -include("couch_db.hrl").
+-include_lib("couch_httpd/include/couch_httpd.hrl").
 
 -export([handle_request/1, handle_compact_req/2, handle_design_req/2,
     db_req/2, couch_doc_open/4,handle_changes_req/2,

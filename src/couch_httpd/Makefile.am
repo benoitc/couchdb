@@ -17,7 +17,8 @@ couch_httpdebindir = $(couch_httpdlibdir)/ebin
 couch_httpdinclude_DATA = $(include_files)
 couch_httpdebin_DATA = $(compiled_files)
 
-include_files = 
+include_files = \
+    include/couch_httpd.hrl
 
 source_files = \
     src/couch_httpd.app.src \

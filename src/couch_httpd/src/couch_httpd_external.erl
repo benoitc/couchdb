@@ -19,6 +19,7 @@
 -import(couch_httpd,[send_error/4]).
 
 -include("couch_db.hrl").
+-include_lib("couch_httpd/include/couch_httpd.hrl").
 
 % handle_external_req/2
 % for the old type of config usage:
