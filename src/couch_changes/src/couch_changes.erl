@@ -12,7 +12,7 @@
 
 -module(couch_changes).
 -include("couch_db.hrl").
--include_lib("couch_httpd/include/couch_httpd.hrl").  
+-include_lib("couch_httpd/include/couch_httpd.hrl").
 -include_lib("couch_changes/include/couch_changes.hrl").
 
 -export([handle_changes/3]).
