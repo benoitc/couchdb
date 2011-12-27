@@ -51,39 +51,29 @@ handle_changes_req1(Req, Db) ->
     end,
     ChangesArgs = parse_changes_query(Req),
     ChangesFun = couch_changes:handle_changes(ChangesArgs, Req, Db),
-    WrapperFun = case ChangesArgs#changes_args.feed of
-    "normal" ->
-        {ok, Info} = couch_db:get_db_info(Db),
-        CurrentEtag = couch_httpd:make_etag(Info),
-        fun(FeedChangesFun) ->
-            couch_httpd:etag_respond(
-                Req,
-                CurrentEtag,
-                fun() ->
-                    {ok, Resp} = couch_httpd:start_json_response(
-                         Req, 200, [{"ETag", CurrentEtag}]
-                    ),
-                    FeedChangesFun(MakeCallback(Resp))
-                end
-            )
-        end;
-    _ ->
-        % "longpoll" or "continuous"
-        {ok, Resp} = couch_httpd:start_json_response(Req, 200),
-        fun(FeedChangesFun) ->
-            FeedChangesFun(MakeCallback(Resp))
-        end
-    end,
+
     couch_stats_collector:increment(
-        {httpd, clients_requesting_changes}
-    ),
+        {httpd, clients_requesting_changes}),
     try
-        WrapperFun(ChangesFun)
+        do_changes_req(Db, Req, ChangesArgs, ChangesFun, MakeCallback)
     after
-    couch_stats_collector:decrement(
-        {httpd, clients_requesting_changes}
-    )
+        couch_stats_collector:decrement(
+            {httpd, clients_requesting_changes})
     end.
+
+
+do_changes_req(Db, Req, #changes_args{feed=normal}, ChangesFun, MakeCallback) ->
+    {ok, Info} = couch_db:get_db_info(Db),
+    CurrentEtag = couch_httpd:make_etag(Info),
+    couch_httpd:etag_respond(Req, CurrentEtag, fun() ->
+                {ok, Resp} = couch_httpd:start_json_response(Req, 200,
+                    [{"ETag", CurrentEtag}]),
+                ChangesFun(MakeCallback(Resp))
+        end);
+do_changes_req(Db, Req, _ChangesArgs, ChangesFun, MakeCallback) ->
+    % "longpoll" or "continuous"
+    {ok, Resp} = couch_httpd:start_json_response(Req, 200),
+    ChangesFun(MakeCallback(Resp)).
 
 parse_changes_query(Req) ->
     lists:foldl(fun({Key, Value}, Args) ->
