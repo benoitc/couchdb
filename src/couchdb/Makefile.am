@@ -48,7 +48,7 @@ source_files = \
     couch_file.erl \
     couch_httpd.erl \
     couch_httpd_db.erl \
-	couch_httpd_changes.erl \
+    couch_httpd_changes.erl \
     couch_httpd_auth.erl \
     couch_httpd_oauth.erl \
     couch_httpd_external.erl \
@@ -104,7 +104,7 @@ compiled_files = \
     couch_file.beam \
     couch_httpd.beam \
     couch_httpd_db.beam \
-	couch_httpd_changes.beam \
+    couch_httpd_changes.beam \
     couch_httpd_auth.beam \
     couch_httpd_oauth.beam \
     couch_httpd_proxy.beam \
