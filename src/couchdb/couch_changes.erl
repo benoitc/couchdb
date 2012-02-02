@@ -373,7 +373,6 @@ send_view_changes(Db, {DName, VName}, StartSeq, Dir, Fun, Acc0) ->
 
     {ok, {_, FullDocInfos}} = couch_mrview:query_view(Db, DDoc, VName,
         #mrargs{}, fun view_cb/2, {Db, []}),
-    ?LOG_INFO("got view results ~p~n", [FullDocInfos]),
     send_lookup_changes(FullDocInfos, StartSeq, Dir, Db, Fun, Acc0).
 
 view_cb({row, Row}, {Db, Acc}) ->
