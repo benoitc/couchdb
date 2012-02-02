@@ -100,8 +100,14 @@ process_doc(Doc, Seq, #mrst{doc_acc=Acc}=State) when length(Acc) > 100 ->
 process_doc(nil, Seq, #mrst{doc_acc=Acc}=State) ->
     {ok, State#mrst{doc_acc=[{nil, Seq, nil} | Acc]}};
 process_doc(#doc{id=Id, deleted=true}, Seq, #mrst{doc_acc=Acc}=State) ->
+    #mrst{db_name=DbName, idx_name=IdxName} = State,
+    ?LOG_DEBUG("view_delete: ~p~n", [{view_updated, {DbName, IdxName}}]),
+    couch_db_update_notifier:notify({view_updated, {DbName, IdxName}}),
     {ok, State#mrst{doc_acc=[{Id, Seq, deleted} | Acc]}};
 process_doc(#doc{id=Id}=Doc, Seq, #mrst{doc_acc=Acc}=State) ->
+    #mrst{db_name=DbName, idx_name=IdxName} = State,
+    ?LOG_DEBUG("view_update: ~p~n", [{view_updated, {DbName, IdxName}}]),
+    couch_db_update_notifier:notify({view_updated, {DbName, IdxName}}),
     {ok, State#mrst{doc_acc=[{Id, Seq, Doc} | Acc]}}.
 
 
