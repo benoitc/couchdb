@@ -258,6 +258,7 @@
     filter = "",
     filter_fun,
     filter_args = [],
+    filter_view,
     include_docs = false,
     conflicts = false,
     db_open_options = []

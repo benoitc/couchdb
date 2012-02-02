@@ -12,6 +12,7 @@
 
 -module(couch_changes).
 -include("couch_db.hrl").
+-include_lib("../couch_mrview/include/couch_mrview.hrl").
 
 -export([handle_changes/3]).
 
@@ -35,16 +36,24 @@
 }).
 
 %% @type Req -> #httpd{} | {json_req, JsonObj()}
-handle_changes(Args1, Req, Db0) ->
+handle_changes(Args0, Req, Db0) ->
     #changes_args{
         style = Style,
         filter = FilterName,
         feed = Feed,
         dir = Dir,
         since = Since
-    } = Args1,
+    } = Args0,
     {FilterFun, FilterArgs} = make_filter_fun(FilterName, Style, Req, Db0),
-    Args = Args1#changes_args{filter_fun = FilterFun, filter_args = FilterArgs},
+    Args1 = Args0#changes_args{filter_fun = FilterFun,
+        filter_args = FilterArgs},
+
+    Args = case FilterName of
+        "_view" ->
+            Args1#changes_args{filter_view=parse_view_param(Req)};
+        _ ->
+            Args1
+    end,
     Start = fun() ->
         {ok, Db} = couch_db:reopen(Db0),
         StartSeq = case Dir of
@@ -66,17 +75,12 @@ handle_changes(Args1, Req, Db0) ->
     if Feed == "continuous" orelse Feed == "longpoll" ->
         fun(CallbackAcc) ->
             {Callback, UserAcc} = get_callback_acc(CallbackAcc),
-            Self = self(),
-            {ok, Notify} = couch_db_update_notifier:start_link(
-                fun({_, DbName}) when  Db0#db.name == DbName ->
-                    Self ! db_updated;
-                (_) ->
-                    ok
-                end
-            ),
+            ConsumerFun = make_update_fun(Db0, FilterName, Args),
+            {ok, Notify} = couch_db_update_notifier:start_link(ConsumerFun),
             {Db, StartSeq} = Start(),
             UserAcc2 = start_sending_changes(Callback, UserAcc, Feed),
             {Timeout, TimeoutFun} = get_changes_timeout(Args, Callback),
+
             Acc0 = build_acc(Args, Callback, UserAcc2, Db, StartSeq,
                              <<"">>, Timeout, TimeoutFun),
             try
@@ -105,6 +109,50 @@ handle_changes(Args1, Req, Db0) ->
             end_sending_changes(Callback, UserAcc3, LastSeq, Feed)
         end
     end.
+
+
+make_update_fun(Db0, "_view", #changes_args{filter_view={DName,
+            VName}=View}) ->
+    Self = self(),
+
+    DesignId = <<"_design/", DName/binary>>,
+    fun
+        ({view_updated, {DbName, IdxName}})
+            when Db0#db.name == DbName, IdxName == DesignId ->
+            Self ! db_updated;
+        ({updated, DbName}) when Db0#db.name == DbName ->
+            spawn(fun() ->
+                        {ok, Db} = couch_db:reopen(Db0),
+                        DesignId = <<"_design/", DName/binary>>,
+                        DDoc = couch_httpd_db:couch_doc_open(Db,
+                            DesignId, nil, [ejson_body]),
+
+                        %% try to update view if the db has been updated.
+                        couch_mrview:query_view(Db, DDoc,
+                            VName,#mrargs{limit=0})
+                end);
+        (_Else) ->
+            ok
+    end;
+make_update_fun(Db0, _FilterName, _ChangeArgs) ->
+    Self = self(),
+    fun
+        ({_, DbName}) when Db0#db.name == DbName ->
+            Self ! db_updated;
+        (_) ->
+            ok
+    end.
+
+
+parse_view_param(Req) ->
+    ViewParam = couch_httpd:qs_value(Req, "view", ""),
+    case re:split(?l2b(ViewParam), <<"/">>) of
+    [DesignName, ViewName] ->
+        {DesignName, ViewName};
+    _ ->
+        throw({bad_request, "Invalid `view` parameter."})
+    end.
+
 
 get_callback_acc({Callback, _UserAcc} = Pair) when is_function(Callback, 3) ->
     Pair;
@@ -165,9 +213,9 @@ builtin_filter_fun("_doc_ids", Style, #httpd{method='GET'}=Req, _Db) ->
     {filter_docids(DocIds, Style), DocIds};
 builtin_filter_fun("_design", Style, _Req, _Db) ->
     {filter_designdoc(Style), []};
-builtin_filter_fun("_view", Style, Req, Db) ->
-    ViewName = couch_httpd:qs_value(Req, "view", ""),
-    {filter_view(ViewName, Style, Db), []};
+builtin_filter_fun("_view", Style, Req, _Db) ->
+    {DName, VName} = parse_view_param(Req),
+    {filter_view(Style, DName, VName), []};
 builtin_filter_fun(_FilterName, _Style, _Req, _Db) ->
     throw({bad_request, "unknown builtin filter name"}).
 
@@ -191,38 +239,34 @@ filter_designdoc(Style) ->
             end
     end.
 
-filter_view("", _Style, _Db) ->
-    throw({bad_request, "`view` filter parameter is not provided."});
-filter_view(ViewName, Style, Db) ->
-    case [list_to_binary(couch_httpd:unquote(Part))
-            || Part <- string:tokens(ViewName, "/")] of
-        [] ->
-            throw({bad_request, "Invalid `view` parameter."});
-        [DName, VName] ->
-            DesignId = <<"_design/", DName/binary>>,
-            DDoc = couch_httpd_db:couch_doc_open(Db, DesignId, nil, [ejson_body]),
+filter_view(Style, DName, VName) ->
+    DesignId = <<"_design/", DName/binary>>,
+    fun
+        (_Db, #doc{id=DocId, revs=Revs}) ->
+            builtin_results(Style, Revs);
+        (Db, DocInfo) ->
+            DDoc = couch_httpd_db:couch_doc_open(Db, DesignId, nil,
+                [ejson_body]),
             % validate that the ddoc has the filter fun
             #doc{body={Props}} = DDoc,
             couch_util:get_nested_json_value({Props}, [<<"views">>, VName]),
-            fun(Db2, DocInfo) ->
-                DocInfos =
-                case Style of
+
+            DocInfos = case Style of
                 main_only ->
                     [DocInfo];
                 all_docs ->
                     [DocInfo#doc_info{revs=[Rev]}|| Rev <- DocInfo#doc_info.revs]
                 end,
-                Docs = [Doc || {ok, Doc} <- [
-                        couch_db:open_doc(Db2, DocInfo2, [deleted, conflicts])
-                            || DocInfo2 <- DocInfos]],
-                {ok, Passes} = couch_query_servers:filter_view(
-                    DDoc, VName, Docs
-                ),
-                [{[{<<"rev">>, couch_doc:rev_to_str({RevPos,RevId})}]}
-                    || {Pass, #doc{revs={RevPos,[RevId|_]}}}
-                    <- lists:zip(Passes, Docs), Pass == true]
-            end
-        end.
+            Docs = [Doc || {ok, Doc} <- [
+                    couch_db:open_doc(Db, DocInfo2, [deleted, conflicts])
+                        || DocInfo2 <- DocInfos]],
+            {ok, Passes} = couch_query_servers:filter_view(
+                DDoc, VName, Docs
+            ),
+            [{[{<<"rev">>, couch_doc:rev_to_str({RevPos,RevId})}]}
+                || {Pass, #doc{revs={RevPos,[RevId|_]}}}
+                <- lists:zip(Passes, Docs), Pass == true]
+    end.
 
 builtin_results(Style, [#rev_info{rev=Rev}|_]=Revs) ->
     case Style of
@@ -293,7 +337,8 @@ send_changes(Args, Acc0, FirstRound) ->
     #changes_args{
         dir = Dir,
         filter = FilterName,
-        filter_args = FilterArgs
+        filter_args = FilterArgs,
+        filter_view = View
     } = Args,
     #changes_acc{
         db = Db,
@@ -308,6 +353,9 @@ send_changes(Args, Acc0, FirstRound) ->
         "_design" ->
             send_changes_design_docs(
                 Db, StartSeq, Dir, fun changes_enumerator/2, Acc0);
+        "_view" ->
+            send_view_changes(
+                Db, View, StartSeq, Dir, fun changes_enumerator/2, Acc0);
         _ ->
             couch_db:changes_since(
                 Db, StartSeq, fun changes_enumerator/2, [{dir, Dir}], Acc0)
@@ -317,6 +365,23 @@ send_changes(Args, Acc0, FirstRound) ->
             Db, StartSeq, fun changes_enumerator/2, [{dir, Dir}], Acc0)
     end.
 
+send_view_changes(Db, {DName, VName}, StartSeq, Dir, Fun, Acc0) ->
+    % always fetch last ddoc
+    DesignId = <<"_design/", DName/binary>>,
+    DDoc = couch_httpd_db:couch_doc_open(Db, DesignId, nil,
+                [ejson_body]),
+
+    {ok, {_, FullDocInfos}} = couch_mrview:query_view(Db, DDoc, VName,
+        #mrargs{}, fun view_cb/2, {Db, []}),
+    ?LOG_INFO("got view results ~p~n", [FullDocInfos]),
+    send_lookup_changes(FullDocInfos, StartSeq, Dir, Db, Fun, Acc0).
+
+view_cb({row, Row}, {Db, Acc}) ->
+    Id = couch_util:get_value(id, Row),
+    {ok, FullDocInfo} = couch_db:get_full_doc_info(Db, Id),
+    {ok, {Db, [FullDocInfo|Acc]}};
+view_cb(_Other, Acc) ->
+    {ok, Acc}.
 
 send_changes_doc_ids(DocIds, Db, StartSeq, Dir, Fun, Acc0) ->
     Lookups = couch_btree:lookup(Db#db.fulldocinfo_by_id_btree, DocIds),
@@ -354,16 +419,15 @@ send_lookup_changes(FullDocInfos, StartSeq, Dir, Db, Fun, Acc0) ->
         fun(A, B) -> A =< B end
     end,
     DocInfos = lists:foldl(
-        fun(FDI, Acc) ->
-            DI = couch_doc:to_doc_info(FDI),
-            case GreaterFun(DI#doc_info.high_seq, StartSeq) of
-            true ->
-                [DI | Acc];
-            false ->
-                Acc
-            end
-        end,
-        [], FullDocInfos),
+        fun (FDI, Acc) ->
+                DI =  couch_doc:to_doc_info(FDI),
+                case GreaterFun(DI#doc_info.high_seq, StartSeq) of
+                true ->
+                    [DI | Acc];
+                false ->
+                    Acc
+                end
+        end, [], FullDocInfos),
     SortedDocInfos = lists:keysort(#doc_info.high_seq, DocInfos),
     FinalAcc = try
         FoldFun(
