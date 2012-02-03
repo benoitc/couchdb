@@ -143,10 +143,14 @@ make_update_fun(Db0, _FilterName, _ChangeArgs) ->
             ok
     end.
 
-
+parse_view_param({json_req, {Props}}) ->
+    {Params} = couch_util:get_value(<<"query">>, Props),
+    parse_view_param1(couch_util:get_value(<<"view">>, Params));
 parse_view_param(Req) ->
-    ViewParam = couch_httpd:qs_value(Req, "view", ""),
-    case re:split(?l2b(ViewParam), <<"/">>) of
+    parse_view_param1(?l2b(couch_httpd:qs_value(Req, "view", ""))).
+
+parse_view_param1(ViewParam) ->
+    case re:split(ViewParam, <<"/">>) of
     [DesignName, ViewName] ->
         {DesignName, ViewName};
     _ ->

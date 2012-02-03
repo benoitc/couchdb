@@ -94,6 +94,8 @@ maybe_append_filters(Base,
             DocIds ->
                 [DocIds]
             end;
+        <<"_", _/binary>> = Filter ->
+            [Filter, get_value(query_params, Options, {[]})];
         Filter ->
             [filter_code(Filter, Source, UserCtx),
                 get_value(query_params, Options, {[]})]
