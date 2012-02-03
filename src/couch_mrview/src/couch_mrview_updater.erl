@@ -93,7 +93,6 @@ purge(_Db, PurgeSeq, PurgedIdRevs, State) ->
         purge_seq=PurgeSeq
     }}.
 
-
 process_doc(Doc, Seq, #mrst{doc_acc=Acc}=State) when length(Acc) > 100 ->
     couch_work_queue:queue(State#mrst.doc_queue, lists:reverse(Acc)),
     process_doc(Doc, Seq, State#mrst{doc_acc=[]});
