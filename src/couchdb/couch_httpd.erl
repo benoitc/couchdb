@@ -315,7 +315,6 @@ handle_request_int(MochiReq, DefaultFun,
     HandlerFun = couch_util:dict_find(HandlerKey, UrlHandlers, DefaultFun),
     {ok, AuthHandlers} = application:get_env(couch, auth_handlers),
 
-    ?LOG_INFO("fuck you ~p~n", [Method]),
     {ok, Resp} =
     try
         case couch_httpd_cors:is_preflight_request(HttpReq) of
