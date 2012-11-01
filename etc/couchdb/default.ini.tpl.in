@@ -69,7 +69,7 @@ allow_persistent_cookies = false ; set to true to allow persistent cookies
 iterations = 10000 ; iterations for password hashing
 
 [cors]
-allows_credentials = false
+credentials = false
 ; List of origins separated by a comma
 ;origins =
 ; List of accepted headers separated by a comma
@@ -80,7 +80,7 @@ allows_credentials = false
 
 ; Configuration for a vhost
 ;[cors:example.com]
-; allows_credentials = false
+; credentials = false
 ; List of origins separated by a comma
 ;origins =
 ; List of accepted headers separated by a comma

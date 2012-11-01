@@ -71,7 +71,7 @@ cors_headers(#httpd{mochi_req=MochiReq}) ->
 handle_cors_headers("*", _Host, _AcceptedOrigins) ->
     [{"Access-Control-Allow-Origin", "*"}];
 handle_cors_headers(Origin, Host, []) ->
-    case allows_credentials(Origin, Host) of
+    case credentials(Origin, Host) of
         true ->
             [{"Access-Control-Allow-Origin", Origin},
              {"Access-Control-Allow-Credentials", "true"}];
@@ -79,9 +79,9 @@ handle_cors_headers(Origin, Host, []) ->
             [{"Access-Control-Allow-Origin", Origin}]
     end;
 handle_cors_headers(Origin, Host, AcceptedOrigins) ->
-    AllowsCredentials = allows_credentials(Origin, Host),
+    AllowCredentials = credentials(Origin, Host),
     case lists:member(Origin, AcceptedOrigins) of
-        true when AllowsCredentials =:= true ->
+        true when AllowCredentials =:= true ->
             [{"Access-Control-Allow-Origin", Origin},
              {"Access-Control-Allow-Credentials", "true"}];
         true ->
@@ -133,7 +133,7 @@ handle_preflight_request(Origin, Host, MochiReq) ->
     % get max age
     MaxAge = cors_config(Host, "max_age", "12345"),
 
-    PreflightHeaders0 = case allows_credentials(Origin, Host) of
+    PreflightHeaders0 = case credentials(Origin, Host) of
         true ->
             [{"Access-Control-Allow-Origin", Origin},
              {"Access-Control-Allow-Credentials", "true"},
@@ -183,13 +183,13 @@ handle_preflight_request(Origin, Host, MochiReq) ->
     end.
 
 
-allows_credentials("*", _Host) ->
+credentials("*", _Host) ->
     false;
-allows_credentials(_Origin, Host) ->
-    Default = get_bool_config("cors", "allows_credentials",
+credentials(_Origin, Host) ->
+    Default = get_bool_config("cors", "credentials",
                               false),
 
-    get_bool_config(cors_section(Host), "allows_credentials",
+    get_bool_config(cors_section(Host), "credentials",
                     Default).
 
 
