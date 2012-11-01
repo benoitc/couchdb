@@ -79,7 +79,7 @@ allows_credentials = false
 
 
 ; Configuration for a vhost
-:[cors:example.com]
+;[cors:example.com]
 ; allows_credentials = false
 ; List of origins separated by a comma
 ;origins =
