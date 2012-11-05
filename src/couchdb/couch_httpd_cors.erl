@@ -64,8 +64,8 @@ cors_headers(#httpd{mochi_req=MochiReq}) ->
             []
     end.
 
-handle_cors_headers(Origin, Host, []) ->
-    make_cors_header(Origin, Host);
+handle_cors_headers(_Origin, _Host, []) ->
+    [];
 handle_cors_headers(Origin, Host, AcceptedOrigins) ->
     AcceptAll = lists:member("*", AcceptedOrigins),
     case {AcceptAll, lists:member(Origin, AcceptedOrigins)} of
