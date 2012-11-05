@@ -37,7 +37,7 @@ is_preflight_request(#httpd{mochi_req=MochiReq}=Req) ->
         true ->
             case preflight_request(MochiReq) of
                 {ok, PreflightHeaders} ->
-                    couch_httpd:send_response(Req, 204, PreflightHeaders, <<>>);
+                    send_preflight_response(Req, PreflightHeaders);
                 _ ->
                     Req
             end;
@@ -56,10 +56,6 @@ cors_headers(#httpd{mochi_req=MochiReq}) ->
             case MochiReq:get_header_value("Origin") of
                 undefined ->
                     [];
-                <<"*">> ->
-                    handle_cors_headers("*", Host, AcceptedOrigins);
-                <<"null">> ->
-                    handle_cors_headers("*", Host, AcceptedOrigins);
                 Origin ->
                     handle_cors_headers(couch_util:to_list(Origin),
                                         Host, AcceptedOrigins)
@@ -68,47 +64,45 @@ cors_headers(#httpd{mochi_req=MochiReq}) ->
             []
     end.
 
-handle_cors_headers("*", _Host, _AcceptedOrigins) ->
-    [{"Access-Control-Allow-Origin", "*"}];
 handle_cors_headers(Origin, Host, []) ->
+    make_cors_header(Origin, Host);
+handle_cors_headers(Origin, Host, AcceptedOrigins) ->
+    AcceptAll = lists:member("*", AcceptedOrigins),
+    case {AcceptAll, lists:member(Origin, AcceptedOrigins)} of
+        {true, _} ->
+            make_cors_header(Origin, Host);
+        {false, true}  ->
+            make_cors_header(Origin, Host);
+        _ ->
+            []
+    end.
+
+make_cors_header(Origin, Host) ->
     case credentials(Origin, Host) of
         true ->
             [{"Access-Control-Allow-Origin", Origin},
              {"Access-Control-Allow-Credentials", "true"}];
         false ->
             [{"Access-Control-Allow-Origin", Origin}]
-    end;
-handle_cors_headers(Origin, Host, AcceptedOrigins) ->
-    AllowCredentials = credentials(Origin, Host),
-    case lists:member(Origin, AcceptedOrigins) of
-        true when AllowCredentials =:= true ->
-            [{"Access-Control-Allow-Origin", Origin},
-             {"Access-Control-Allow-Credentials", "true"}];
-        true ->
-            [{"Access-Control-Allow-Origin", Origin}];
-        _ ->
-            []
     end.
-
 
 preflight_request(MochiReq) ->
     Host = couch_httpd_vhost:host(MochiReq),
     case MochiReq:get_header_value("Origin") of
         undefined ->
             MochiReq;
-        <<"*">>  ->
-            handle_preflight_request("*", Host, MochiReq);
-        <<"null">> ->
-            handle_preflight_request("*", Host, MochiReq);
+
         Origin ->
             AcceptedOrigins = re:split(cors_config(Host, "origins", []),
                                        "\\s*,\\s*",
                                        [trim, {return, list}]),
-            case AcceptedOrigins of
-                [] ->
+            AcceptAll = lists:member("*", AcceptedOrigins),
+
+            case {AcceptAll, AcceptedOrigins} of
+                {true, _} ->
                     handle_preflight_request(couch_util:to_list(Origin),
                                              Host, MochiReq);
-                _ ->
+                {false, _} ->
                     case lists:member(Origin, AcceptedOrigins) of
                         true ->
                             handle_preflight_request(couch_util:to_list(Origin),
@@ -181,6 +175,15 @@ handle_preflight_request(Origin, Host, MochiReq) ->
                     false
             end
     end.
+
+
+send_preflight_response(#httpd{mochi_req=MochiReq}=Req, Headers) ->
+    couch_httpd:log_request(Req, 204),
+    couch_stats_collector:increment({httpd_status_codes, 204}),
+    Headers1 = couch_httpd:http_1_0_keep_alive(MochiReq, Headers),
+    Headers2 = Headers1 ++ couch_httpd:server_header() ++
+               couch_httpd_auth:cookie_auth_header(Req, Headers1),
+    {ok, MochiReq:respond({204, Headers2, <<>>})}.
 
 
 credentials("*", _Host) ->
