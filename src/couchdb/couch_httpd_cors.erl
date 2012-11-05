@@ -22,7 +22,7 @@
 
 -export([is_preflight_request/1, cors_headers/1]).
 
--define(SUPPORTED_HEADERS, "Origin, Accept, Accept-Language, Content-Type," ++
+-define(SUPPORTED_HEADERS, "Accept, Accept-Language, Content-Type," ++
         "Expires, Last-Modified, Pragma, Origin, Content-Length," ++
         "If-Match, Destination, X-Requested-With, " ++
         "X-Http-Method-Override, Content-Range").
