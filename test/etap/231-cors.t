@@ -32,7 +32,7 @@ server() ->
 main(_) ->
     test_util:init_code_path(),
 
-    etap:plan(12),
+    etap:plan(14),
     case (catch test()) of
         ok ->
             etap:end_tests();
@@ -88,9 +88,15 @@ test() ->
     test_db_preflight_request(),
     test_db_origin_request(),
     test_db1_origin_request(),
+    test_preflight_with_port1(),
+
+    ok = couch_config:set("cors", "origins", "http://example.com:5984", false),
+    test_preflight_with_port2(),
+
 
     ok = couch_config:set("cors", "origins", "*", false),
-    test_preflight_with_wildcard(),
+    test_preflight_with_wildcard(), 
+    
     ok = couch_config:set("cors", "origins", "http://example.com", false),
 
     %% do tests with auth
@@ -98,6 +104,7 @@ test() ->
 
     test_db_preflight_auth_request(),
     test_db_origin_auth_request(),
+    
 
     %% restart boilerplate
     catch couch_db:close(Db),
@@ -242,6 +249,32 @@ test_preflight_with_wildcard() ->
         etap:is(proplists:get_value("Access-Control-Allow-Origin", RespHeaders),
             "http://example.com",
             "db origin ok");
+    _ ->
+        etap:is(false, true, "ibrowse failed")
+    end.
+
+test_preflight_with_port1() ->
+    Headers = [{"Origin", "http://example.com:5984"},
+               {"Access-Control-Request-Method", "GET"}],
+    case ibrowse:send_req(server(), Headers, options, []) of
+    {ok, _, RespHeaders, _}  ->
+        % I would either expect the current origin or a wildcard to be returned
+        etap:is(proplists:get_value("Access-Control-Allow-Origin", RespHeaders),
+            undefined,
+            "check non defined host:port in origin ok");
+    _ ->
+        etap:is(false, true, "ibrowse failed")
+    end.
+
+test_preflight_with_port2() ->
+    Headers = [{"Origin", "http://example.com:5984"},
+               {"Access-Control-Request-Method", "GET"}],
+    case ibrowse:send_req(server(), Headers, options, []) of
+    {ok, _, RespHeaders, _}  ->
+        % I would either expect the current origin or a wildcard to be returned
+        etap:is(proplists:get_value("Access-Control-Allow-Origin", RespHeaders),
+            "http://example.com:5984",
+            "check host:port in origin ok");
     _ ->
         etap:is(false, true, "ibrowse failed")
     end.
