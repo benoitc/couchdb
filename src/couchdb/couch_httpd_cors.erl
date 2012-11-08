@@ -82,14 +82,8 @@ handle_cors_headers(Origin, Host, AcceptedOrigins) ->
 
 
 make_cors_header(Origin, Host) ->
-    Credentials = credentials(Origin, Host),
-    [{"Access-Control-Allow-Origin", Origin}]
-    ++ make_cors_header_credentials(Credentials).
-
-make_cors_header_credentials(true) ->
-    [{"Access-Control-Allow-Credentials", "true"}];
-make_cors_header_credentials(false) ->
-    [].
+    Headers = [{"Access-Control-Allow-Origin", Origin}],
+    maybe_add_credentials(Origin, Host, Headers).
 
 preflight_request(MochiReq) ->
     Host = couch_httpd_vhost:host(MochiReq),
@@ -130,19 +124,11 @@ handle_preflight_request(Origin, Host, MochiReq) ->
     % get max age
     MaxAge = cors_config(Host, "max_age", ?CORS_DEFAULT_MAX_AGE),
 
-    PreflightHeaders0 = case credentials(Origin, Host) of
-    true ->
-        [{"Access-Control-Allow-Origin", Origin},
-         {"Access-Control-Allow-Credentials", "true"},
-         {"Access-Control-Max-Age", MaxAge},
-         {"Access-Control-Allow-Methods", string:join(SupportedMethods,
-                                                      ", ")}];
-    false ->
-        [{"Access-Control-Allow-Origin", Origin},
-         {"Access-Control-Max-Age", MaxAge},
-         {"Access-Control-Allow-Methods", string:join(SupportedMethods,
-                                                      ", ")}]
-    end,
+    PreflightHeaders0 = maybe_add_credentials(Origin, Host, [
+        {"Access-Control-Allow-Origin", Origin},
+        {"Access-Control-Max-Age", MaxAge},
+        {"Access-Control-Allow-Methods",
+            string:join(SupportedMethods, ", ")}]),
 
     case MochiReq:get_header_value("Access-Control-Request-Method") of
     undefined ->
@@ -186,6 +172,15 @@ send_preflight_response(#httpd{mochi_req=MochiReq}=Req, Headers) ->
     Headers2 = Headers1 ++ couch_httpd:server_header() ++
                couch_httpd_auth:cookie_auth_header(Req, Headers1),
     {ok, MochiReq:respond({204, Headers2, <<>>})}.
+
+
+maybe_add_credentials(Origin, Host, Headers) ->
+    maybe_add_credentials(Headers, credentials(Origin, Host)).
+
+maybe_add_credentials(Headers, false) ->
+    Headers;
+maybe_add_credentials(Headers, true) ->
+    Headers ++ [{"Access-Control-Allow-Credentials", "true"}].
 
 
 credentials("*", _Host) ->
