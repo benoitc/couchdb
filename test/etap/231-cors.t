@@ -54,6 +54,11 @@ set_admin_password(UserName, Password) ->
     couch_config:set("admins", UserName,
         "-hashed-" ++ Hashed ++ "," ++ Salt, false).
 
+cycle_db(DbName) ->
+    couch_server:delete(list_to_binary(DbName), [admin_user_ctx()]),
+    {ok, Db} = couch_db:create(list_to_binary(DbName), [admin_user_ctx()]),
+    Db.
+
 test() ->
 
     ibrowse:start(),
@@ -64,12 +69,9 @@ test() ->
 
     %% initialize db
     timer:sleep(1000),
-    couch_server:delete(list_to_binary(dbname()), [admin_user_ctx()]),
-    couch_server:delete(list_to_binary(dbname1()), [admin_user_ctx()]),
-    couch_server:delete(list_to_binary(dbname2()), [admin_user_ctx()]),
-    {ok, Db} = couch_db:create(list_to_binary(dbname()), [admin_user_ctx()]),
-    {ok, Db1} = couch_db:create(list_to_binary(dbname1()), [admin_user_ctx()]),
-    {ok, Db2} = couch_db:create(list_to_binary(dbname2()), [admin_user_ctx()]),
+    Db = cycle_db(dbname()),
+    Db1 = cycle_db(dbname1()),
+    Db2 = cycle_db(dbname2()),
 
     % CORS is disabled by default
     test_no_headers_server(),
