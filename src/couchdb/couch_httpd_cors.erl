@@ -189,11 +189,8 @@ send_preflight_response(#httpd{mochi_req=MochiReq}=Req, Headers) ->
 credentials("*", _Host) ->
     false;
 credentials(_Origin, Host) ->
-    Default = get_bool_config("cors", "credentials",
-                              false),
-
-    get_bool_config(cors_section(Host), "credentials",
-                    Default).
+    Default = get_bool_config("cors", "credentials", false),
+    get_bool_config(cors_section(Host), "credentials", Default).
 
 
 cors_config(Host, Key, Default) ->
