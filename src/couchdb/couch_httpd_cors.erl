@@ -50,9 +50,7 @@ cors_headers(#httpd{mochi_req=MochiReq}) ->
     Host = couch_httpd_vhost:host(MochiReq),
     case get_bool_config("httpd", "enable_cors", false) of
         true ->
-            AcceptedOrigins = re:split(cors_config(Host, "origins", []),
-                                       "\\s*,\\s*",
-                                       [trim, {return, list}]),
+            AcceptedOrigins = split_list(cors_config(Host, "origins", [])),
             case MochiReq:get_header_value("Origin") of
                 undefined ->
                     [];
@@ -93,9 +91,7 @@ preflight_request(MochiReq) ->
             MochiReq;
 
         Origin ->
-            AcceptedOrigins = re:split(cors_config(Host, "origins", []),
-                                       "\\s*,\\s*",
-                                       [trim, {return, list}]),
+            AcceptedOrigins = split_list(cors_config(Host, "origins", [])),
             AcceptAll = lists:member("*", AcceptedOrigins),
 
             case {AcceptAll, AcceptedOrigins} of
@@ -157,8 +153,7 @@ handle_preflight_request(Origin, Host, MochiReq) ->
                             % could check. make sure everything is a
                             % list
                             RH = [string:to_lower(H)
-                                  || H <- re:split(Headers, ",\\s*",
-                                                   [{return,list},trim])],
+                                  || H <- split_headers(Headers)],
                             {Headers, RH}
                     end,
                     % check if headers are supported
@@ -216,6 +211,9 @@ get_bool_config(Section, Key, Default) ->
 
 split_list(S) ->
     re:split(S, "\\s*,\\s*", [trim, {return, list}]).
+
+split_headers(H) ->
+    re:split(H, ",\\s*", [{return,list}, trim]).
 
 split_host_port(HostAsString) ->
     case string:rchr(HostAsString, $:) of
