@@ -32,19 +32,19 @@
 
 is_preflight_request(#httpd{method=Method}=Req) when Method /= 'OPTIONS' ->
     Req;
-is_preflight_request(#httpd{mochi_req=MochiReq}=Req) ->
-    case get_bool_config("httpd", "enable_cors", false) of
-        true ->
-            case preflight_request(MochiReq) of
-                {ok, PreflightHeaders} ->
-                    send_preflight_response(Req, PreflightHeaders);
-                _ ->
-                    Req
-            end;
-        false ->
+is_preflight_request(Req) ->
+    EnableCors = get_bool_config("httpd", "enable_cors", false),
+    is_preflight_request(Req, EnableCors).
+
+is_preflight_request(Req, false) ->
+    Req;
+is_preflight_request(#httpd{mochi_req=MochiReq}=Req, true) ->
+    case preflight_request(MochiReq) of
+        {ok, PreflightHeaders} ->
+            send_preflight_response(Req, PreflightHeaders);
+        _ ->
             Req
     end.
-
 
 cors_headers(#httpd{mochi_req=MochiReq}) ->
     Host = couch_httpd_vhost:host(MochiReq),
