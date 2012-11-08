@@ -55,7 +55,7 @@ cors_headers(MochiReq) ->
 
 cors_headers(#httpd{mochi_req=MochiReq}, true) ->
     Host = couch_httpd_vhost:host(MochiReq),
-    AcceptedOrigins = split_list(cors_config(Host, "origins", [])),
+    AcceptedOrigins = get_accepted_origins(Host),
     case MochiReq:get_header_value("Origin") of
     undefined ->
         [];
@@ -91,7 +91,7 @@ preflight_request(MochiReq) ->
         MochiReq;
 
     Origin ->
-        AcceptedOrigins = split_list(cors_config(Host, "origins", [])),
+        AcceptedOrigins = get_accepted_origins(Host),
         AcceptAll = lists:member("*", AcceptedOrigins),
 
         case {AcceptAll, AcceptedOrigins} of
@@ -209,6 +209,9 @@ get_bool_config(Section, Key, Default) ->
     "false" ->
         false
     end.
+
+get_accepted_origins(Host) ->
+    split_list(cors_config(Host, "origins", [])).
 
 split_list(S) ->
     re:split(S, "\\s*,\\s*", [trim, {return, list}]).
