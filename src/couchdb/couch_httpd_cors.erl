@@ -33,7 +33,7 @@
 is_preflight_request(#httpd{method=Method}=Req) when Method /= 'OPTIONS' ->
     Req;
 is_preflight_request(Req) ->
-    EnableCors = get_bool_config("httpd", "enable_cors", false),
+    EnableCors = enable_cors(),
     is_preflight_request(Req, EnableCors).
 
 is_preflight_request(Req, false) ->
@@ -46,21 +46,22 @@ is_preflight_request(#httpd{mochi_req=MochiReq}=Req, true) ->
             Req
     end.
 
-cors_headers(#httpd{mochi_req=MochiReq}) ->
+cors_headers(MochiReq) ->
+    EnableCors = enable_cors(),
+    cors_headers(MochiReq, EnableCors).
+
+cors_headers(#httpd{mochi_req=MochiReq}, true) ->
     Host = couch_httpd_vhost:host(MochiReq),
-    case get_bool_config("httpd", "enable_cors", false) of
-        true ->
-            AcceptedOrigins = split_list(cors_config(Host, "origins", [])),
-            case MochiReq:get_header_value("Origin") of
-                undefined ->
-                    [];
-                Origin ->
-                    handle_cors_headers(couch_util:to_list(Origin),
-                                        Host, AcceptedOrigins)
-            end;
-        false ->
-            []
-    end.
+    AcceptedOrigins = split_list(cors_config(Host, "origins", [])),
+    case MochiReq:get_header_value("Origin") of
+        undefined ->
+            [];
+        Origin ->
+            handle_cors_headers(couch_util:to_list(Origin),
+                                Host, AcceptedOrigins)
+    end;
+cors_headers(_MochiReq, false) ->
+    [].
 
 handle_cors_headers(_Origin, _Host, []) ->
     [];
@@ -198,6 +199,9 @@ cors_config(Host, Key, Default) ->
 cors_section(Host0) ->
     {Host, _Port} = split_host_port(Host0),
     "cors:" ++ Host.
+
+enable_cors() ->
+    get_bool_config("httpd", "enable_cors", false).
 
 get_bool_config(Section, Key, Default) ->
     case couch_config:get(Section, Key) of
