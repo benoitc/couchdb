@@ -40,10 +40,10 @@ is_preflight_request(Req, false) ->
     Req;
 is_preflight_request(#httpd{mochi_req=MochiReq}=Req, true) ->
     case preflight_request(MochiReq) of
-        {ok, PreflightHeaders} ->
-            send_preflight_response(Req, PreflightHeaders);
-        _ ->
-            Req
+    {ok, PreflightHeaders} ->
+        send_preflight_response(Req, PreflightHeaders);
+    _ ->
+        Req
     end.
 
 cors_headers(MochiReq) ->
@@ -54,11 +54,11 @@ cors_headers(#httpd{mochi_req=MochiReq}, true) ->
     Host = couch_httpd_vhost:host(MochiReq),
     AcceptedOrigins = split_list(cors_config(Host, "origins", [])),
     case MochiReq:get_header_value("Origin") of
-        undefined ->
-            [];
-        Origin ->
-            handle_cors_headers(couch_util:to_list(Origin),
-                                Host, AcceptedOrigins)
+    undefined ->
+        [];
+    Origin ->
+        handle_cors_headers(couch_util:to_list(Origin),
+                            Host, AcceptedOrigins)
     end;
 cors_headers(_MochiReq, false) ->
     [].
@@ -68,46 +68,46 @@ handle_cors_headers(_Origin, _Host, []) ->
 handle_cors_headers(Origin, Host, AcceptedOrigins) ->
     AcceptAll = lists:member("*", AcceptedOrigins),
     case {AcceptAll, lists:member(Origin, AcceptedOrigins)} of
-        {true, _} ->
-            make_cors_header(Origin, Host);
-        {false, true}  ->
-            make_cors_header(Origin, Host);
-        _ ->
-            []
+    {true, _} ->
+        make_cors_header(Origin, Host);
+    {false, true}  ->
+        make_cors_header(Origin, Host);
+    _ ->
+        []
     end.
 
 make_cors_header(Origin, Host) ->
     case credentials(Origin, Host) of
-        true ->
-            [{"Access-Control-Allow-Origin", Origin},
-             {"Access-Control-Allow-Credentials", "true"}];
-        false ->
-            [{"Access-Control-Allow-Origin", Origin}]
+    true ->
+        [{"Access-Control-Allow-Origin", Origin},
+         {"Access-Control-Allow-Credentials", "true"}];
+    false ->
+        [{"Access-Control-Allow-Origin", Origin}]
     end.
 
 preflight_request(MochiReq) ->
     Host = couch_httpd_vhost:host(MochiReq),
     case MochiReq:get_header_value("Origin") of
-        undefined ->
-            MochiReq;
+    undefined ->
+        MochiReq;
 
-        Origin ->
-            AcceptedOrigins = split_list(cors_config(Host, "origins", [])),
-            AcceptAll = lists:member("*", AcceptedOrigins),
+    Origin ->
+        AcceptedOrigins = split_list(cors_config(Host, "origins", [])),
+        AcceptAll = lists:member("*", AcceptedOrigins),
 
-            case {AcceptAll, AcceptedOrigins} of
-                {true, _} ->
-                    handle_preflight_request(couch_util:to_list(Origin),
-                                             Host, MochiReq);
-                {false, _} ->
-                    case lists:member(Origin, AcceptedOrigins) of
-                        true ->
-                            handle_preflight_request(couch_util:to_list(Origin),
-                                                     Host, MochiReq);
-                        false ->
-                            false
-                    end
+        case {AcceptAll, AcceptedOrigins} of
+        {true, _} ->
+            handle_preflight_request(couch_util:to_list(Origin),
+                                     Host, MochiReq);
+        {false, _} ->
+            case lists:member(Origin, AcceptedOrigins) of
+            true ->
+                handle_preflight_request(couch_util:to_list(Origin),
+                                         Host, MochiReq);
+            false ->
+                false
             end
+        end
     end.
 
 handle_preflight_request(Origin, Host, MochiReq) ->
@@ -125,51 +125,51 @@ handle_preflight_request(Origin, Host, MochiReq) ->
     MaxAge = cors_config(Host, "max_age", "12345"),
 
     PreflightHeaders0 = case credentials(Origin, Host) of
-        true ->
-            [{"Access-Control-Allow-Origin", Origin},
-             {"Access-Control-Allow-Credentials", "true"},
-             {"Access-Control-Max-Age", MaxAge},
-             {"Access-Control-Allow-Methods", string:join(SupportedMethods,
-                                                          ", ")}];
-        false ->
-            [{"Access-Control-Allow-Origin", Origin},
-             {"Access-Control-Max-Age", MaxAge},
-             {"Access-Control-Allow-Methods", string:join(SupportedMethods,
-                                                          ", ")}]
+    true ->
+        [{"Access-Control-Allow-Origin", Origin},
+         {"Access-Control-Allow-Credentials", "true"},
+         {"Access-Control-Max-Age", MaxAge},
+         {"Access-Control-Allow-Methods", string:join(SupportedMethods,
+                                                      ", ")}];
+    false ->
+        [{"Access-Control-Allow-Origin", Origin},
+         {"Access-Control-Max-Age", MaxAge},
+         {"Access-Control-Allow-Methods", string:join(SupportedMethods,
+                                                      ", ")}]
     end,
 
     case MochiReq:get_header_value("Access-Control-Request-Method") of
-        undefined ->
-            {ok, PreflightHeaders0};
-        Method ->
-            case lists:member(Method, SupportedMethods) of
-                true ->
-                    % method ok , check headers
-                    AccessHeaders = MochiReq:get_header_value(
-                            "Access-Control-Request-Headers"),
-                    {FinalReqHeaders, ReqHeaders} = case AccessHeaders of
-                        undefined -> {"", []};
-                        Headers ->
-                            % transform header list in something we
-                            % could check. make sure everything is a
-                            % list
-                            RH = [string:to_lower(H)
-                                  || H <- split_headers(Headers)],
-                            {Headers, RH}
-                    end,
-                    % check if headers are supported
-                    case ReqHeaders -- SupportedHeaders of
-                        [] ->
-                            PreflightHeaders = PreflightHeaders0 ++
-                                               [{"Access-Control-Allow-Headers",
-                                                 FinalReqHeaders}],
-                            {ok, PreflightHeaders};
-                        _ ->
-                            false
-                    end;
-                false ->
-                    false
-            end
+    undefined ->
+        {ok, PreflightHeaders0};
+    Method ->
+        case lists:member(Method, SupportedMethods) of
+        true ->
+            % method ok , check headers
+            AccessHeaders = MochiReq:get_header_value(
+                    "Access-Control-Request-Headers"),
+            {FinalReqHeaders, ReqHeaders} = case AccessHeaders of
+                undefined -> {"", []};
+                Headers ->
+                    % transform header list in something we
+                    % could check. make sure everything is a
+                    % list
+                    RH = [string:to_lower(H)
+                          || H <- split_headers(Headers)],
+                    {Headers, RH}
+            end,
+            % check if headers are supported
+            case ReqHeaders -- SupportedHeaders of
+            [] ->
+                PreflightHeaders = PreflightHeaders0 ++
+                                   [{"Access-Control-Allow-Headers",
+                                     FinalReqHeaders}],
+                {ok, PreflightHeaders};
+            _ ->
+                false
+            end;
+        false ->
+            false
+        end
     end.
 
 
@@ -205,12 +205,12 @@ enable_cors() ->
 
 get_bool_config(Section, Key, Default) ->
     case couch_config:get(Section, Key) of
-        undefined ->
-            Default;
-        "true" ->
-            true;
-        "false" ->
-            false
+    undefined ->
+        Default;
+    "true" ->
+        true;
+    "false" ->
+        false
     end.
 
 split_list(S) ->
@@ -221,15 +221,15 @@ split_headers(H) ->
 
 split_host_port(HostAsString) ->
     case string:rchr(HostAsString, $:) of
-        0 ->
+    0 ->
+        {HostAsString, '*'};
+    N ->
+        HostPart = string:substr(HostAsString, 1, N-1),
+        case (catch erlang:list_to_integer(string:substr(HostAsString,
+                        N+1, length(HostAsString)))) of
+        {'EXIT', _} ->
             {HostAsString, '*'};
-        N ->
-            HostPart = string:substr(HostAsString, 1, N-1),
-            case (catch erlang:list_to_integer(string:substr(HostAsString,
-                            N+1, length(HostAsString)))) of
-                {'EXIT', _} ->
-                    {HostAsString, '*'};
-                Port ->
-                    {HostPart, Port}
-            end
+        Port ->
+            {HostPart, Port}
+        end
     end.
