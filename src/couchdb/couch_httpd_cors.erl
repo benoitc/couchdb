@@ -31,7 +31,6 @@
         "TRACE, CONNECT, COPY, OPTIONS").
 
 % TODO: - pick a sane default
-%       - make configurable
 -define(CORS_DEFAULT_MAX_AGE, 12345).
 
 is_preflight_request(#httpd{method=Method}=Req) when Method /= 'OPTIONS' ->
