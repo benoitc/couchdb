@@ -80,14 +80,16 @@ handle_cors_headers(Origin, Host, AcceptedOrigins) ->
         []
     end.
 
+
 make_cors_header(Origin, Host) ->
-    case credentials(Origin, Host) of
-    true ->
-        [{"Access-Control-Allow-Origin", Origin},
-         {"Access-Control-Allow-Credentials", "true"}];
-    false ->
-        [{"Access-Control-Allow-Origin", Origin}]
-    end.
+    Credentials = credentials(Origin, Host),
+    [{"Access-Control-Allow-Origin", Origin}]
+    ++ make_cors_header_credentials(Credentials).
+
+make_cors_header_credentials(true) ->
+    [{"Access-Control-Allow-Credentials", "true"}];
+make_cors_header_credentials(false) ->
+    [].
 
 preflight_request(MochiReq) ->
     Host = couch_httpd_vhost:host(MochiReq),
