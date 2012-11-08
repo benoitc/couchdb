@@ -30,6 +30,10 @@
 -define(SUPPORTED_METHODS, "GET, HEAD, POST, PUT, DELETE," ++
         "TRACE, CONNECT, COPY, OPTIONS").
 
+% TODO: - pick a sane default
+%       - make configurable
+-define(CORS_DEFAULT_MAX_AGE, 12345).
+
 is_preflight_request(#httpd{method=Method}=Req) when Method /= 'OPTIONS' ->
     Req;
 is_preflight_request(Req) ->
@@ -122,7 +126,7 @@ handle_preflight_request(Origin, Host, MochiReq) ->
     SupportedHeaders = [string:to_lower(H) || H <- AllSupportedHeaders],
 
     % get max age
-    MaxAge = cors_config(Host, "max_age", "12345"),
+    MaxAge = cors_config(Host, "max_age", ?CORS_DEFAULT_MAX_AGE),
 
     PreflightHeaders0 = case credentials(Origin, Host) of
     true ->
