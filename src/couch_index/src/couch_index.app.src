@@ -12,11 +12,9 @@
 
 {application, couch_index, [
     {description, "CouchDB Secondary Index Manager"},
-    {vsn, "@version@"},
-    {modules, [
-        couch_index,
-        couch_index_server
-    ]},
+    {vsn, git},
+    {modules, []},
     {registered, [couch_index_server]},
-    {applications, [kernel, stdlib]}
+    {applications, [kernel, stdlib, couch]},
+    {mod, {couch_index_app, []}}
 ]}.

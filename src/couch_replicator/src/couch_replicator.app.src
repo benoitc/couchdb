@@ -12,22 +12,16 @@
 
 {application, couch_replicator, [
     {description, "CouchDB replicator"},
-    {vsn, "%version%"},
-    {modules, [  
-        couch_replicator_api_wrap,
-        couch_replicator_httpc,
-        couch_replicator_httpd,
-        couch_replicator_job_sup,
-        couch_replicator_notifier,
-        couch_replicator_manager,
-        couch_replicator_httpc_pool,
-        couch_replicator_utils,
-        couch_replicator_worker,
-        couch_replicator
-    ]},
+    {vsn, git},
+    {modules, []},
     {registered, [
-        couch_replicator_job_sup
+        couch_replicator_manager_sup,
+        couch_replicator_job_sup,
+        couch_replicator_sup
     ]},
-    {applications, [kernel, stdlib]}
+    {applications, [kernel, stdlib, crypto, sasl,
+        inets, oauth, ibrowse, couch]},
+    {mod, { couch_replicator_app, []}},
+    {env, []}
 ]}.
 

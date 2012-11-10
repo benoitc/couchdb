@@ -27,7 +27,7 @@
 
 -define(MOD, couch_mrview_index).
 
--include("couch_db.hrl").
+-include_lib("couch/include/couch_db.hrl").
 -include_lib("couch_mrview/include/couch_mrview.hrl").
 
 
@@ -531,7 +531,7 @@ delete_index_file(DbName, Sig) ->
 
 delete_compaction_file(DbName, Sig) ->
     delete_file(compaction_file(DbName, Sig)).
-    
+
 
 delete_file(FName) ->
     case filelib:is_file(FName) of

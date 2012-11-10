@@ -1,0 +1,47 @@
+%% -*- tab-width: 4;erlang-indent-level: 4;indent-tabs-mode: nil -*-
+%% ex: ft=erlang ts=4 sw=4 et
+
+{cover_enabled, true}.
+{eunit_opts, [{report,{eunit_surefire,[{dir,"."}]}}]}.
+{edoc_opts, [{preprocess, true}]}.
+{erl_opts, [warnings_as_errors]}.
+
+{require_otp_vsn, "R14|R15"}.
+
+{port_specs, [
+    {"priv/couch_ejson_compare.so", ["c_src/couch_ejson_compare/*.c"], [
+        {"CPPFLAGS", "%ICU_CPPFLAGS% %DRV_CFLAGS%"},
+        {"LDFLAGS", "%ICU_LIBS% $DRV_LDFLAGS"}
+    ]},
+    {"priv/couch_icu_driver.so", ["c_src/icu_driver/*.c"], [
+        {"CPPFLAGS", "%ICU_CPPFLAGS% %DRV_CFLAGS%"},
+        {"LDFLAGS", "%ICU_LIBS% $DRV_LDFLAGS"}
+    ]},
+    {"couchjs", ["c_src/couchjs/*.c"], [
+        "CFLAGS", "-g -Wall -Werror -D_BSD_SOURC %JS_CFLAGS% $DRV_CFLAGS",
+        "LDFLAGS", "%JS_LIBS% $ERL_LDFLAGS"
+    ]}
+]}.
+
+
+{deps, [
+    %% erlang oauth module
+    {oauth, ".*", {git, "git://github.com/refuge/erlang-oauth.git", {branch,
+        "master"}}},
+
+    %% ibrowse module , http client
+    {ibrowse, ".*", {git, "git://github.com/refuge/ibrowse.git",
+                     {branch, "master"}}},
+
+    %% mochiweb module, http framework
+    {mochiweb, ".*", {git,"git://github.com/refuge/mochiweb.git",
+                        {branch, "master"}}},
+
+    %% snappy module, used for compression
+    {snappy, ".*", {git, "git://github.com/refuge/snappy-erlang.git",
+                   {branch, "refuge"}}},
+
+    %% ejson module, encode/decode module
+    {ejson, ".*", {git, "git://github.com/refuge/ejson.git", "master"}}
+
+]}.

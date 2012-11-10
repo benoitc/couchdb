@@ -18,7 +18,7 @@
     handle_view_list_req/3
 ]).
 
--include("couch_db.hrl").
+-include_lib("couch/include/couch_db.hrl").
 -include_lib("couch_mrview/include/couch_mrview.hrl").
 
 -record(lacc, {
@@ -145,17 +145,17 @@ send_doc_update_response(Req, Db, DDoc, UpdateName, Doc, DocId) ->
             {ok, NewRev} = couch_db:update_doc(Db, NewDoc, Options),
             NewRevStr = couch_doc:rev_to_str(NewRev),
             DocIdHeader = case DocId of
-                              null -> 
+                              null ->
                                   [{<<"json">>, {Props}}] = JsonResp0,
                                   case lists:keyfind(<<"id">>, 1, Props) of
-                                      {_, NewDocId} -> 
+                                      {_, NewDocId} ->
                                           [{<<"X-Couch-Id">>, NewDocId}];
                                       false ->
                                           []
                                   end;
-                              DocId -> 
+                              DocId ->
                                   [{<<"X-Couch-Id">>, DocId}]
-                          end,    
+                          end,
             {[
                 {<<"code">>, 201},
                 {<<"headers">>, {[{<<"X-Couch-Update-NewRev">>, NewRevStr}] ++ DocIdHeader}}

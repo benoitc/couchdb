@@ -47,6 +47,7 @@ fi
 
 gunzip -c m4/ac_check_icu.m4.gz > m4/ac_check_icu.m4
 gunzip -c m4/ac_check_curl.m4.gz > m4/ac_check_curl.m4
+gunzip -c m4/ac_check_erlang.m4.gz > m4/ac_check_erlang.m4
 gunzip -c m4/pkg.m4.gz > m4/pkg.m4
 
 # Seach a list of names for the first occurence of a program.

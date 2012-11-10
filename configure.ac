@@ -20,7 +20,6 @@ AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 
 AM_CONFIG_HEADER([config.h])
-AC_CONFIG_HEADERS([src/snappy/google-snappy/config.h])
 
 AM_INIT_AUTOMAKE([1.6.3 foreign])
 
@@ -34,67 +33,6 @@ AC_PROG_LIBTOOL
 AC_PROG_LN_S
 
 PKG_PROG_PKG_CONFIG
-
-dnl Config for google snappy
-m4_define([snappy_major], [1])
-m4_define([snappy_minor], [0])
-m4_define([snappy_patchlevel], [3])
-
-AC_PROG_CXX
-AC_LANG([C++])
-AC_C_BIGENDIAN
-AC_CHECK_HEADERS([stdint.h stddef.h sys/mman.h sys/resource.h])
-AC_CHECK_FUNC([mmap])
-
-AC_MSG_CHECKING([if the compiler supports __builtin_expect])
-
-AC_TRY_COMPILE(, [
-    return __builtin_expect(1, 1) ? 1 : 0
-], [
-    snappy_have_builtin_expect=yes
-    AC_MSG_RESULT([yes])
-], [
-    snappy_have_builtin_expect=no
-    AC_MSG_RESULT([no])
-])
-if test x$snappy_have_builtin_expect = xyes ; then
-    AC_DEFINE([HAVE_BUILTIN_EXPECT], [1], [Define to 1 if the compiler supports __builtin_expect.])
-fi
-
-AC_MSG_CHECKING([if the compiler supports __builtin_ctzll])
-
-AC_TRY_COMPILE(, [
-    return (__builtin_ctzll(0x100000000LL) == 32) ? 1 : 0
-], [
-    snappy_have_builtin_ctz=yes
-    AC_MSG_RESULT([yes])
-], [
-    snappy_have_builtin_ctz=no
-    AC_MSG_RESULT([no])
-])
-if test x$snappy_have_builtin_ctz = xyes ; then
-    AC_DEFINE([HAVE_BUILTIN_CTZ], [1], [Define to 1 if the compiler supports __builtin_ctz and friends.])
-fi
-
-if test "$ac_cv_header_stdint_h" = "yes"; then
-    AC_SUBST([ac_cv_have_stdint_h], [1])
-else
-    AC_SUBST([ac_cv_have_stdint_h], [0])
-fi
-if test "$ac_cv_header_stddef_h" = "yes"; then
-    AC_SUBST([ac_cv_have_stddef_h], [1])
-else
-    AC_SUBST([ac_cv_have_stddef_h], [0])
-fi
-
-SNAPPY_MAJOR="snappy_major"
-SNAPPY_MINOR="snappy_minor"
-SNAPPY_PATCHLEVEL="snappy_patchlevel"
-
-AC_SUBST([SNAPPY_MAJOR])
-AC_SUBST([SNAPPY_MINOR])
-AC_SUBST([SNAPPY_PATCHLEVEL])
-dnl End of google snappy specific config
 
 AC_MSG_CHECKING([for pthread_create in -lpthread])
 
@@ -111,31 +49,6 @@ else
     LIBS="$original_LIBS"
     AC_MSG_RESULT([no])
 fi
-
-AC_PATH_PROG([ERL], [erl])
-AS_IF([test x${ERL} = x], [
-    AC_MSG_ERROR([Could not find the `erl' executable. Is Erlang installed?])
-    ])
-
-AC_ARG_WITH([erlang], [AC_HELP_STRING([--with-erlang=PATH],
-    [set PATH to the Erlang include directory])], [
-    ERLANG_FLAGS="-I$withval"
-], [
-    realerl=`readlink -f $ERL 2>/dev/null`
-    AS_IF([test $? -eq 0], [
-           erlbase=`dirname $realerl`
-           erlbase=`dirname $erlbase`
-           ERLANG_FLAGS="-I${erlbase}/usr/include"
-          ], [
-           # Failed to figure out where erl is installed..
-           # try to add some default directories to search
-           ERLANG_FLAGS="-I${libdir}/erlang/usr/include"
-           ERLANG_FLAGS="$ERLANG_FLAGS -I/usr/lib/erlang/usr/include"
-           ERLANG_FLAGS="$ERLANG_FLAGS -I/usr/local/lib/erlang/usr/include"
-           ERLANG_FLAGS="$ERLANG_FLAGS -I/opt/local/lib/erlang/usr/include"
-          ])
-])
-AC_SUBST(ERLANG_FLAGS)
 
 PKG_CHECK_MODULES([JS], [mozjs185], [
     JS_LIB_DIR="$(${PKG_CONFIG} --variable=libdir mozjs185)"
@@ -374,49 +287,23 @@ case "$(uname -s)" in
 esac
 
 
-erlang_version_error="The installed Erlang version is less than 5.6.5 (R12B05)."
-
-version="`${ERL} -version 2>&1 | ${SED} 's/[[^0-9]]/ /g'`"
-
-if test `echo $version | ${AWK} "{print \\$1}"` -lt 5; then
-    AC_MSG_ERROR([$erlang_version_error])
-fi
-
-if test `echo $version | ${AWK} "{print \\$2}"` -lt 6; then
-    AC_MSG_ERROR([$erlang_version_error])
-fi
-
-if test `echo $version | ${AWK} "{print \\$2}"` -eq 6; then
-    if test `echo $version | ${AWK} "{print \\$3}"` -lt 5; then
-        AC_MSG_ERROR([$erlang_version_error])
-    fi
-fi
-
-otp_release="`${ERL} -noshell -eval 'io:put_chars(erlang:system_info(otp_release)).' -s erlang halt`"
-AC_SUBST(otp_release)
-AM_CONDITIONAL([USE_OTP_NIFS], [test x$otp_release \> xR13B03])
-AM_CONDITIONAL([USE_EJSON_COMPARE_NIF], [test x$otp_release \> xR14B03])
-
-has_crypto=`${ERL} -eval "case application:load(crypto) of ok -> ok; _ -> exit(no_crypto) end." -noshell -s init stop`
-
-if test -n "$has_crypto"; then
-    AC_MSG_ERROR([Could not find the Erlang crypto library. Has Erlang been compiled with OpenSSL support?])
-fi
-
-AC_PATH_PROG([ERLC], [erlc])
+# erlang checks
+AC_ERLANG_NEED_ERLC()
+AC_ERLANG_NEED_ERL()
+AX_ERLANG_REQUIRE_OTP_VER([R14B04], ,
+    [AC_MSG_ERROR([Erlang >= R14B04 not found])])
+AC_ERLANG_SUBST_ERTS_VER
+AC_ERLANG_SUBST_ROOT_DIR
+AX_ERLANG_SUBST_OTP_VER
+AC_ERLANG_SUBST_LIB_DIR
+AC_ERLANG_CHECK_LIB([erl_interface])
+AC_ERLANG_CHECK_LIB([crypto], , [AC_MSG_ERROR([Erlang crypto is required])])
+AC_PATH_PROG([ESCRIPT],[escript], ,[`AS_DIRNAME([$ERLC])`])
+AC_PATH_PROG([DIALYZER],[dialyzer], ,[`AS_DIRNAME([$ERLC])`])
 
 if test x${ERLC} = x; then
     AC_MSG_ERROR([Could not find the `erlc' executable. Is Erlang installed?])
 fi
-
-OLD_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$ERLANG_FLAGS $CPPFLAGS"
-AC_CHECK_HEADER([erl_driver.h], [], [
-    AC_MSG_ERROR([Could not find the `erl_driver.h' header.
-
-Are the Erlang headers installed? Use the `--with-erlang' option to specify the
-path to the Erlang include directory.])])
-CPPFLAGS="$OLD_CPPFLAGS"
 
 AC_PATH_PROG([HELP2MAN_EXECUTABLE], [help2man])
 if test x${HELP2MAN_EXECUTABLE} = x; then
@@ -526,9 +413,20 @@ else
     AC_SUBST([localerlanglibdir], [${locallibdir}/erlang/lib])
 fi
 
-# fix for older autotools that don't define "abs_top_YYY" by default
-AC_SUBST(abs_top_srcdir)
-AC_SUBST(abs_top_builddir)
+AC_SUBST(abs_top_srcdir, [`cd $srcdir; pwd`])
+AC_SUBST(abs_top_builddir, [`pwd`])
+
+
+# rebar dependency
+AC_CONFIG_COMMANDS([rebar],
+    [(cd $SRCDIR/support/rebar/ && \
+      $ESCRIPT bootstrap && \
+      mv ./rebar $BUILDDIR && \
+      echo "Rebar built" || exit 1)],
+    [ESCRIPT=$ESCRIPT
+     SRCDIR=$abs_top_srcdir
+     BUILDDIR=$abs_top_builddir])
+
 
 AC_REVISION([LOCAL_VERSION])
 
@@ -549,20 +447,7 @@ AC_CONFIG_FILES([etc/logrotate.d/Makefile])
 AC_CONFIG_FILES([etc/windows/Makefile])
 AC_CONFIG_FILES([etc/Makefile])
 AC_CONFIG_FILES([share/Makefile])
-AC_CONFIG_FILES([src/Makefile])
-AC_CONFIG_FILES([src/couch_index/Makefile])
-AC_CONFIG_FILES([src/couch_mrview/Makefile])
-AC_CONFIG_FILES([src/couch_replicator/Makefile])
-AC_CONFIG_FILES([src/couchdb/couch.app.tpl])
-AC_CONFIG_FILES([src/couchdb/Makefile])
-AC_CONFIG_FILES([src/couchdb/priv/Makefile])
-AC_CONFIG_FILES([src/erlang-oauth/Makefile])
-AC_CONFIG_FILES([src/etap/Makefile])
-AC_CONFIG_FILES([src/ibrowse/Makefile])
-AC_CONFIG_FILES([src/mochiweb/Makefile])
-AC_CONFIG_FILES([src/snappy/Makefile])
-AC_CONFIG_FILES([src/snappy/google-snappy/snappy-stubs-public.h])
-AC_CONFIG_FILES([src/ejson/Makefile])
+
 AC_CONFIG_FILES([test/Makefile])
 AC_CONFIG_FILES([test/bench/Makefile])
 AC_CONFIG_FILES([test/etap/Makefile])
