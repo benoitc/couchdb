@@ -36,13 +36,18 @@
 -define(FLUSH_MAX_MEM, 10000000).
 
 priv_dir() ->
-    case code:priv_dir(couch) of
-        {error, bad_name} ->
-            % small hack, in dev mode "app" is couchdb. Fixing requires
-            % renaming src/couch to src/couch. Not really worth the hassle.
-            % -Damien
-            code:priv_dir(couchdb);
-        Dir -> Dir
+    case couch_config:get("couchdb", "util_driver_dir", null) of
+    null ->
+        case code:priv_dir(couch) of
+            {error, bad_name} ->
+                % small hack, in dev mode "app" is couchdb. Fixing requires
+                % renaming src/couch to src/couch. Not really worth the hassle.
+                % -Damien
+                code:priv_dir(couchdb);
+            Dir -> Dir
+        end;
+    LibDir0 ->
+        LibDir0
     end.
 
 % Normalize a pathname by removing .. and . components.
@@ -260,33 +265,18 @@ implode([H], Sep, Acc) ->
 implode([H|T], Sep, Acc) ->
     implode(T, Sep, [Sep,H|Acc]).
 
-
-drv_port() ->
-    case get(couch_drv_port) of
-    undefined ->
-        Port = open_port({spawn, "couch_icu_driver"}, []),
-        put(couch_drv_port, Port),
-        Port;
-    Port ->
-        Port
-    end.
-
 collate(A, B) ->
     collate(A, B, []).
 
 collate(A, B, Options) when is_binary(A), is_binary(B) ->
     Operation =
     case lists:member(nocase, Options) of
-        true -> 1; % Case insensitive
-        false -> 0 % Case sensitive
+        true -> collate_nocase; % Case insensitive
+        false -> collate % Case sensitive
     end,
-    SizeA = byte_size(A),
-    SizeB = byte_size(B),
-    Bin = <<SizeA:32/native, A/binary, SizeB:32/native, B/binary>>,
-    [Result] = erlang:port_control(drv_port(), Operation, Bin),
-    % Result is 0 for lt, 1 for eq and 2 for gt. Subtract 1 to return the
-    % expected typical -1, 0, 1
-    Result - 1.
+    {ok, Result} = jninif:call(Operation, {A, B}),
+    % Result is 0 for lt, 1 for eq and 2 for gt.
+    Result.
 
 should_flush() ->
     should_flush(?FLUSH_MAX_MEM).

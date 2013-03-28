@@ -23,17 +23,7 @@ start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 init([]) ->
-    LibDir = util_driver_dir(),
-    case erl_ddll:load(LibDir, "couch_icu_driver") of
-    ok ->
-        {ok, nil};
-    {error, already_loaded} ->
-        ?LOG_INFO("~p reloading couch_icu_driver", [?MODULE]),
-        ok = erl_ddll:reload(LibDir, "couch_icu_driver"),
-        {ok, nil};
-    {error, Error} ->
-        {stop, erl_ddll:format_error(Error)}
-    end.
+    {ok, nil}.
 
 handle_call(_Request, _From, State) ->
     {reply, ok, State}.
@@ -48,15 +38,4 @@ terminate(_Reason, _State) ->
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
-
     {ok, State}.
-
-
-% private API
-util_driver_dir() ->
-    case couch_config:get("couchdb", "util_driver_dir", null) of
-    null ->
-        filename:join(couch_util:priv_dir(), "lib");
-    LibDir0 ->
-        LibDir0
-    end.

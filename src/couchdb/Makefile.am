@@ -78,7 +78,8 @@ source_files = \
     couch_uuids.erl \
     couch_db_updater.erl \
     couch_work_queue.erl \
-    json_stream_parse.erl
+    json_stream_parse.erl  \
+	jninif.erl
 
 EXTRA_DIST = $(source_files) couch_db.hrl couch_js_functions.hrl
 
@@ -135,7 +136,8 @@ compiled_files = \
     couch_uuids.beam \
     couch_db_updater.beam \
     couch_work_queue.beam \
-    json_stream_parse.beam
+    json_stream_parse.beam \
+	jninif.erl
 
 # doc_base = \
 #     erlang.png \

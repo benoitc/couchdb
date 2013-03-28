@@ -37,18 +37,22 @@
 
 debug(Format, Args) ->
     {ConsoleMsg, FileMsg} = get_log_messages(self(), debug, Format, Args),
+    jninif:cast(log_debug, ConsoleMsg),
     gen_event:sync_notify(error_logger, {couch_debug, ConsoleMsg, FileMsg}).
 
 info(Format, Args) ->
     {ConsoleMsg, FileMsg} = get_log_messages(self(), info, Format, Args),
+    jninif:cast(log_info, ConsoleMsg),
     gen_event:sync_notify(error_logger, {couch_info, ConsoleMsg, FileMsg}).
 
 warn(Format, Args) ->
     {ConsoleMsg, FileMsg} = get_log_messages(self(), warn, Format, Args),
+    jninif:cast(log_warn, ConsoleMsg),
     gen_event:sync_notify(error_logger, {couch_warn, ConsoleMsg, FileMsg}).
 
 error(Format, Args) ->
     {ConsoleMsg, FileMsg} = get_log_messages(self(), error, Format, Args),
+    jninif:cast(log_error, ConsoleMsg),
     gen_event:sync_notify(error_logger, {couch_error, ConsoleMsg, FileMsg}).
 
 

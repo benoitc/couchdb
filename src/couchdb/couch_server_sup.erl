@@ -110,11 +110,13 @@ start_server(IniFiles) ->
     [begin
         case Uri of
             undefined -> ok;
-            Uri -> ?LOG_INFO("Apache CouchDB has started on ~s", [Uri])
+            Uri ->
+                jninif:cast(started, list_to_binary(Uri)),
+                ?LOG_INFO("Apache CouchDB has started on ~s", [Uri])
         end
     end
     || Uri <- Uris],
-    case couch_config:get("couchdb", "uri_file", null) of 
+    case couch_config:get("couchdb", "uri_file", null) of
     null -> ok;
     UriFile ->
         Lines = [begin case Uri of

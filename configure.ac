@@ -129,7 +129,7 @@ AS_IF([test x${ERL} = x], [
     AC_MSG_ERROR([Could not find the `erl' executable. Is Erlang installed?])
 ])
 
-AC_ARG_WITH([erlang], 
+AC_ARG_WITH([erlang],
     [AS_HELP_STRING([--with-erlang=PATH],
         [set PATH to the Erlang include directory])
 ], [
@@ -241,7 +241,8 @@ Are the Mozilla SpiderMonkey headers installed?])
     ])
 ])
 
-AC_CHECK_LIB([mozjs185], [JS_NewContext], [JS_LIB_BASE=mozjs185], [
+AC_CHECK_LIB([mozjs-17.0], [JS_NewContext], [JS_LIB_BASE=mozjs-17.0], [
+  AC_CHECK_LIB([mozjs185], [JS_NewContext], [JS_LIB_BASE=mozjs185], [
     AC_CHECK_LIB([mozjs185-1.0], [JS_NewContext], [JS_LIB_BASE=mozjs185-1.0], [
         AC_CHECK_LIB([mozjs], [JS_NewContext], [JS_LIB_BASE=mozjs], [
             AC_CHECK_LIB([js], [JS_NewContext], [JS_LIB_BASE=js], [
@@ -255,6 +256,7 @@ Is the Mozilla SpiderMonkey library installed?])
             ])
         ])
     ])
+  ])
 ])
 
 # Figure out what version of SpiderMonkey to use
@@ -360,7 +362,6 @@ AC_ARG_WITH([win32-icu-binaries],
     ICU_LIBS="-L$withval/lib -licuuc -licudt -licuin"
     ICU_BIN=$withval/bin
 ], [
-    AX_CHECK_ICU([3.4.1])
     ICU_BIN=
 ])
 
@@ -432,8 +433,8 @@ otp_release="`\
 
 AC_SUBST(otp_release)
 
-AM_CONDITIONAL([USE_OTP_NIFS], [test x$otp_release \> xR13B03])
-AM_CONDITIONAL([USE_EJSON_COMPARE_NIF], [test x$otp_release \> xR14B03])
+AM_CONDITIONAL([USE_OTP_NIFS], [false])
+AM_CONDITIONAL([USE_EJSON_COMPARE_NIF], [false])
 
 has_crypto=`\
     ${ERL} -eval "\
@@ -442,7 +443,7 @@ has_crypto=`\
 
 if test -n "$has_crypto"; then
     AC_MSG_ERROR([Could not find the Erlang crypto library.
-    
+
 Has Erlang been compiled with OpenSSL support?])
 fi
 
@@ -450,7 +451,7 @@ AC_PATH_PROG([ERLC], [erlc])
 
 if test x${ERLC} = x; then
     AC_MSG_ERROR([Could not find the `erlc' executable.
-    
+
 Is Erlang installed?])
 fi
 
@@ -474,35 +475,35 @@ tests_enabled=yes
 docs_enabled=yes
 strictness_enabled=no
 
-AC_ARG_ENABLE([init], 
+AC_ARG_ENABLE([init],
     [AS_HELP_STRING([--disable-init],
         [don't install init script where applicable])
 ], [
     use_init=$enableval
 ], [])
 
-AC_ARG_ENABLE([launchd], 
+AC_ARG_ENABLE([launchd],
     [AS_HELP_STRING([--disable-launchd],
         [don't install launchd configuration where applicable])
 ], [
     use_launchd=$enableval
 ], [])
 
-AC_ARG_ENABLE([native-mochijson], 
+AC_ARG_ENABLE([native-mochijson],
     [AS_HELP_STRING([--enable-native-mochijson],
         [compile mochijson to native code (EXPERIMENTAL)])
 ], [
     native_mochijson_enabled=$enableval
 ], [])
 
-AC_ARG_ENABLE([tests], 
+AC_ARG_ENABLE([tests],
     [AS_HELP_STRING([--disable-tests],
         [skip tests during build])
 ], [
     tests_enabled=$enableval
 ], [])
 
-AC_ARG_ENABLE([docs], 
+AC_ARG_ENABLE([docs],
     [AS_HELP_STRING([--disable-docs],
         [skip docs during build])
 ], [
@@ -563,7 +564,7 @@ AC_CHECK_PROG([HAS_PDFLATEX], [pdflatex], [yes])
 if test x${HAS_PDFLATEX} = x; then
     if test x${strictness_enabled} = xyes; then
         AC_MSG_ERROR([Could not find the `pdflatex' executable.
-    
+
 Is LaTeX installed?])
     else
         AC_MSG_WARN([You will be unable to regenerate PDF documentation.])
@@ -575,7 +576,7 @@ AC_CHECK_PROG([HAS_MAKEINFO], [makeinfo], [yes])
 if test x${HAS_MAKEINFO} = x; then
     if test x${strictness_enabled} = xyes; then
         AC_MSG_ERROR([Could not find the `makeinfo' executable.
-    
+
 Is GNU Texinfo installed?])
     else
         AC_MSG_WARN([You will be unable to regenerate info documentation.])
@@ -587,7 +588,7 @@ AC_CHECK_PROG([HAS_INSTALLINFO], [install-info], [yes])
 if test x${HAS_INSTALLINFO} = x; then
     if test x${strictness_enabled} = xyes; then
         AC_MSG_ERROR([Could not find the `install-info' executable.
-    
+
 Is GNU Texinfo installed?])
     else
         AC_MSG_WARN([You will be unable to install info documentation.])
@@ -612,7 +613,7 @@ if test x${docs_enabled} = xyes; then
         build_html=yes
         if test x${HAS_MAKEINFO} = xyes; then
             build_info=yes
-        fi    
+        fi
         if test x${HAS_PDFLATEX} = xyes; then
             build_pdf=yes
         fi

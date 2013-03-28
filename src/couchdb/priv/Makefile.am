@@ -38,7 +38,7 @@ EXTRA_DIST = \
 
 CLEANFILES = $(man_file_build) stat_descriptions.cfg
 
-couchprivlib_LTLIBRARIES = couch_icu_driver.la
+couchprivlib_LTLIBRARIES =
 if USE_EJSON_COMPARE_NIF
 couchprivlib_LTLIBRARIES += couch_ejson_compare.la
 couch_ejson_compare_la_SOURCES = couch_ejson_compare/couch_ejson_compare.c
