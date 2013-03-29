@@ -133,6 +133,10 @@ ${LIBTOOLIZE} -f -c --automake
 ${ACLOCAL} -I m4 -Wall
 ${AUTOHEADER} -f
 ${AUTOMAKE} -f -a -Wall
+
+echo "builtin(include, altoptions.m4)dnl" >> aclocal.m4
+echo "builtin(include, android.m4)dnl" >> aclocal.m4
+
 ${AUTOCONF} -f -Wall
 
 rm -f INSTALL

@@ -31,6 +31,10 @@ AC_USE_SYSTEM_EXTENSIONS
 AC_ENABLE_SHARED
 AC_DISABLE_STATIC
 
+TARGET_CPU="${target_cpu}"
+TARGET_VENDOR="${target_vendor}"
+TARGET_OS="${target_os}"
+
 AC_PROG_CC
 LT_INIT([win32-dll])
 LT_INIT
@@ -241,6 +245,8 @@ Are the Mozilla SpiderMonkey headers installed?])
     ])
 ])
 
+MOZ_ANDROID_NDK
+
 AC_CHECK_LIB([mozjs-17.0], [JS_NewContext], [JS_LIB_BASE=mozjs-17.0], [
   AC_CHECK_LIB([mozjs185], [JS_NewContext], [JS_LIB_BASE=mozjs185], [
     AC_CHECK_LIB([mozjs185-1.0], [JS_NewContext], [JS_LIB_BASE=mozjs185-1.0], [
@@ -371,25 +377,34 @@ AC_SUBST(ICU_LIBS)
 AC_SUBST(ICU_BIN)
 
 use_curl=yes
-
-AC_ARG_WITH([win32-curl],
-    [AS_HELP_STRING([--with-win32-curl=PATH],
-        [set PATH to the Win32 native curl directory])
+AC_ARG_ENABLE([curl],
+    [AS_HELP_STRING([--disable-curl],
+        [disable curl usage in couchjs])
 ], [
-    # default build on windows is a static lib, and that's what we want too
-    CURL_CFLAGS="-I$withval/include -DCURL_STATICLIB"
-    CURL_LIBS="-L$withval/lib -llibcurl -lWs2_32 -lkernel32 -luser32 -ladvapi32 -lWldap32"
-    # OpenSSL libraries may be pulled in via libcurl if it was built with SSL
-    # these are libeay32 ssleay32 instead of crypto ssl on unix
+    AC_MSG_WARN([You will be unable to run some JavaScript unit tests.])
+    use_curl=no
+    CURL_LIBS=
 ], [
-    AX_LIB_CURL([7.18.0],[
-        AC_DEFINE([HAVE_CURL], [1], ["Provide HTTP support to couchjs"])
-    ],[
-        AC_MSG_WARN([You will be unable to run some JavaScript unit tests.])
-        use_curl=no
-        CURL_LIBS=
+    AC_ARG_WITH([win32-curl],
+        [AS_HELP_STRING([--with-win32-curl=PATH],
+            [set PATH to the Win32 native curl directory])
+    ], [
+        # default build on windows is a static lib, and that's what we want too
+        CURL_CFLAGS="-I$withval/include -DCURL_STATICLIB"
+        CURL_LIBS="-L$withval/lib -llibcurl -lWs2_32 -lkernel32 -luser32 -ladvapi32 -lWldap32"
+        # OpenSSL libraries may be pulled in via libcurl if it was built with SSL
+        # these are libeay32 ssleay32 instead of crypto ssl on unix
+    ], [
+        AX_LIB_CURL([7.18.0],[
+            AC_DEFINE([HAVE_CURL], [1], ["Provide HTTP support to couchjs"])
+        ],[
+            AC_MSG_WARN([You will be unable to run some JavaScript unit tests.])
+            use_curl=no
+            CURL_LIBS=
+        ])
     ])
 ])
+
 
 AC_SUBST(CURL_CFLAGS)
 AC_SUBST(CURL_LIBS)
@@ -467,6 +482,7 @@ Use the `--with-erlang' option to specify the Erlang include directory.])
 ])
 
 CPPFLAGS="$OLD_CPPFLAGS"
+
 
 use_init=yes
 use_launchd=yes
