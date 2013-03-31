@@ -138,8 +138,8 @@ case "$target" in
     ANDROID_PLATFORM="${android_platform}"
     ANDROID_VERSION="${android_version}"
 
-    AC_DEFINE(ANDROID)
-    AC_DEFINE_UNQUOTED(ANDROID_VERSION, $android_version)
+    AC_DEFINE([ANDROID], [1], [Enable Android])
+    AC_DEFINE_UNQUOTED([ANDROID_VERSION], [$android_version], [Android Version])
     AC_SUBST(ANDROID_VERSION)
     CROSS_COMPILE=1
     AC_SUBST(ANDROID_NDK)
