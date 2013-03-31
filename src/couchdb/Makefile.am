@@ -137,7 +137,7 @@ compiled_files = \
     couch_db_updater.beam \
     couch_work_queue.beam \
     json_stream_parse.beam \
-	jninif.erl
+	jninif.beam
 
 # doc_base = \
 #     erlang.png \

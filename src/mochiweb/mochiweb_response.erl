@@ -11,6 +11,8 @@
 -export([get_header_value/1, get/1, dump/0]).
 -export([send/1, write_chunk/1]).
 
+-compile({parse_transform, pmod_pt}).
+
 %% @spec get_header_value(string() | atom() | binary()) -> string() | undefined
 %% @doc Get the value of the given response header.
 get_header_value(K) ->

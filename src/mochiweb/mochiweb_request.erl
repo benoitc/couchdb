@@ -23,6 +23,8 @@
 -export([accepted_encodings/1]).
 -export([accepts_content_type/1]).
 
+-compile({parse_transform, pmod_pt}).
+
 -define(SAVE_QS, mochiweb_request_qs).
 -define(SAVE_PATH, mochiweb_request_path).
 -define(SAVE_RECV, mochiweb_request_recv).

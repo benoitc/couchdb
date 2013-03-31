@@ -118,7 +118,7 @@ case "$target" in
     dnl Add --allow-shlib-undefined, because libGLESv2 links to an
     dnl undefined symbol (present on the hardware, just not in the
     dnl NDK.)
-    LDFLAGS="-mandroid -L$android_platform/usr/lib -Wl,-rpath-link=$android_platform/usr/lib --sysroot=$android_platform -llog -Wl,--allow-shlib-undefined $android_platform/usr/lib/crtbegin_dynamic.o $android_platform/usr/lib/crtend_android.o $LDFLAGS"
+    LDFLAGS="-mandroid -L$android_platform/usr/lib -Wl,-rpath-link=$android_platform/usr/lib --sysroot=$android_platform -llog -Wl,--allow-shlib-undefined $LDFLAGS"
     dnl prevent cross compile section from using these flags as host flags
     if test -z "$HOST_CPPFLAGS" ; then
         HOST_CPPFLAGS=" "
@@ -154,7 +154,7 @@ esac
 AC_DEFUN([MOZ_ANDROID_STLPORT],
 [
 
-if test "$OS_TARGET" = "Android" -a -z "$gonkdir"; then
+if test "$OS_TARGET" = "Android"; then
     case "${CPU_ARCH}-${MOZ_ARCH}" in
     arm-armv7*)
         ANDROID_CPU_ARCH=armeabi-v7a

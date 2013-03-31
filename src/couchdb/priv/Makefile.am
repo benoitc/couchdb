@@ -70,8 +70,8 @@ COUCHJS_SRCS = \
 
 locallibbin_PROGRAMS = couchjs
 couchjs_SOURCES = $(COUCHJS_SRCS)
-couchjs_CFLAGS = -g -Wall -Werror -D_BSD_SOURCE $(CURL_CFLAGS) $(JS_CFLAGS)
-couchjs_LDADD = $(CURL_LIBS) $(JS_LIBS)
+couchjs_CFLAGS =-D_BSD_SOURCE $(CURL_CFLAGS) $(JS_CFLAGS) $(CFLAGS)
+couchjs_LDADD = $(CURL_LIBS) $(JS_LIBS) $(LIBS)
 
 couchpriv_DATA = stat_descriptions.cfg
 couchpriv_PROGRAMS = couchspawnkillable

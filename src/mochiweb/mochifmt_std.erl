@@ -7,6 +7,8 @@
 -author('bob@mochimedia.com').
 -export([format/2, get_value/2, format_field/2, get_field/2, convert_field/2]).
 
+-compile({parse_transform, pmod_pt}).
+
 format(Format, Args) ->
     mochifmt:format(Format, Args, THIS).
 

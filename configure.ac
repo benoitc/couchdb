@@ -156,27 +156,34 @@ AC_ARG_WITH([erlang],
 
 AC_SUBST(ERLANG_FLAGS)
 
-PKG_CHECK_MODULES([JS], [mozjs185], [
-    JS_LIB_DIR="$(${PKG_CONFIG} --variable=libdir mozjs185)"
-], [
-    PKG_CHECK_MODULES([JS], [mozilla-js >= 1.7], [
-        JS_LIB_DIR="$(${PKG_CONFIG} --variable=sdkdir mozilla-js)/lib"
-    ], [
-        JS_LIB_DIR="${libdir}"
-        JS_CFLAGS="-I/usr/include"
-        JS_CFLAGS="$JS_CFLAGS -I/usr/include/js"
-        JS_CFLAGS="$JS_CFLAGS -I/usr/include/mozjs"
-        JS_CFLAGS="$JS_CFLAGS -I/usr/local/include/js"
-        JS_CFLAGS="$JS_CFLAGS -I/opt/local/include/js"
-    ])
+
+AC_PATH_PROG([ERLC], [erlc])
+
+if test x${ERLC} = x; then
+    AC_MSG_ERROR([Could not find the `erlc' executable.
+
+Is Erlang installed?])
+fi
+
+OLD_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="$ERLANG_FLAGS $CPPFLAGS"
+
+AC_CHECK_HEADER([erl_driver.h], [], [
+    AC_MSG_ERROR([Could not find the `erl_driver.h' header.
+
+Are the Erlang headers installed?
+
+Use the `--with-erlang' option to specify the Erlang include directory.])
 ])
+
+CPPFLAGS="$OLD_CPPFLAGS"
 
 AC_ARG_WITH([js-include],
     [AS_HELP_STRING([--with-js-include=PATH],
         [set PATH to the SpiderMonkey include directory])
 ], [
     JS_INCLUDE="$withval"
-    JS_CFLAGS="-I$JS_INCLUDE"
+    JS_CFLAGS="-I$withval"
 ], [])
 
 AC_ARG_WITH([js-lib],
@@ -199,16 +206,7 @@ AC_ARG_ENABLE([js-trunk],
 AC_ARG_VAR([ERLC_FLAGS], [general flags to prepend to ERLC_FLAGS])
 AC_ARG_VAR([FLAGS], [general flags to prepend to LDFLAGS and CPPFLAGS])
 
-AS_CASE([$(uname -s)], [CYGWIN*], [] , [*], [
-    CPPFLAGS="$CPPFLAGS -I/opt/local/include"
-    CPPFLAGS="$CPPFLAGS -I/opt/local/include/js"
-    CPPFLAGS="$CPPFLAGS -I/usr/local/include"
-    CPPFLAGS="$CPPFLAGS -I/usr/local/include/js"
-    CPPFLAGS="$CPPFLAGS -I/usr/include"
-    CPPFLAGS="$CPPFLAGS -I/usr/include/js"
-    LDFLAGS="$LDFLAGS -L/opt/local/lib"
-    LDFLAGS="$LDFLAGS -L/usr/local/lib"
-])
+
 
 CPPFLAGS="$CPPFLAGS $FLAGS"
 LDFLAGS="$LDFLAGS $FLAGS"
@@ -246,6 +244,7 @@ Are the Mozilla SpiderMonkey headers installed?])
 ])
 
 MOZ_ANDROID_NDK
+MOZ_ANDROID_STLPORT
 
 AC_CHECK_LIB([mozjs-17.0], [JS_NewContext], [JS_LIB_BASE=mozjs-17.0], [
   AC_CHECK_LIB([mozjs185], [JS_NewContext], [JS_LIB_BASE=mozjs185], [
@@ -353,9 +352,10 @@ if test x${IS_WINDOWS} = xTRUE; then
     fi
 fi
 
-JS_LIBS="-l$JS_LIB_BASE -lm $JS_LIBS"
+JS_LIBS="-l$JS_LIB_BASE -lm -lc $JS_LIBS"
 
 AC_SUBST(JS_LIBS)
+AC_SUBST(JS_CFLAGS)
 
 LIBS="$OLD_LIBS"
 CPPFLAGS="$OLD_CPPFLAGS"
@@ -462,26 +462,7 @@ has_crypto=`\
 #Has Erlang been compiled with OpenSSL support?])
 #fi
 
-AC_PATH_PROG([ERLC], [erlc])
 
-if test x${ERLC} = x; then
-    AC_MSG_ERROR([Could not find the `erlc' executable.
-
-Is Erlang installed?])
-fi
-
-OLD_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$ERLANG_FLAGS $CPPFLAGS"
-
-AC_CHECK_HEADER([erl_driver.h], [], [
-    AC_MSG_ERROR([Could not find the `erl_driver.h' header.
-
-Are the Erlang headers installed?
-
-Use the `--with-erlang' option to specify the Erlang include directory.])
-])
-
-CPPFLAGS="$OLD_CPPFLAGS"
 
 
 use_init=yes

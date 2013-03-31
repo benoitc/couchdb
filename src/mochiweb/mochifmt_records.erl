@@ -13,6 +13,8 @@
 -author('bob@mochimedia.com').
 -export([get_value/2]).
 
+-compile({parse_transform, pmod_pt}).
+
 get_value(Key, Rec) when is_tuple(Rec) and is_atom(element(1, Rec)) ->
     try begin
             Atom = list_to_existing_atom(Key),
