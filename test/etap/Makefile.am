@@ -15,7 +15,8 @@ noinst_DATA = test_util.beam test_web.beam
 
 noinst_PROGRAMS = test_cfg_register
 test_cfg_register_SOURCES = test_cfg_register.c
-test_cfg_register_CFLAGS = -D_BSD_SOURCE
+test_cfg_register_CFLAGS = -D_BSD_SOURCE $(CFLAGS) -I$(STLPORT_SOURCES)/cxx-stl/stlport/stlport -I$(ANDROID_PLATFORM)/usr/lib
+test_cfg_register_LDFLAGS = $(LDFLAGS) $(LIBS)
 
 %.beam: %.erl
 	$(ERLC) $<

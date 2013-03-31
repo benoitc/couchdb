@@ -52,8 +52,7 @@ mochiweb_file_collection = \
 	mochiweb_socket_server.erl \
 	mochiweb_sup.erl \
 	mochiweb_util.erl \
-	reloader.erl \
-	pmod_pt.erl
+	reloader.erl
 
 mochiwebebin_make_generated_file_list = \
 	mochifmt.beam \
@@ -89,8 +88,7 @@ mochiwebebin_make_generated_file_list = \
 	mochiweb_socket_server.beam \
 	mochiweb_sup.beam \
 	mochiweb_util.beam \
-	reloader.beam \
-	pmod_pt.beam
+	reloader.beam
 
 mochiwebebin_DATA = \
     $(mochiwebebin_make_generated_file_list)
@@ -109,4 +107,4 @@ mochijson2.beam: mochijson2.erl
 	$(ERLC) $(ERLC_FLAGS) $(MOCHIJSON_ERLC_FLAGS) $<
 
 %.beam: %.erl
-	$(ERLC) $(ERLC_FLAGS) $<
+	$(ERLC) $(ERLC_FLAGS) -pa ../etap $<

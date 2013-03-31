@@ -13,9 +13,11 @@
 etapebindir = $(localerlanglibdir)/etap/ebin
 
 etap_file_collection = \
+	pmod_pt.erl \
     etap.erl
 
 etapebin_make_generated_file_list = \
+	pmod_pt.beam \
     etap.beam
 
 etapebin_DATA = $(etapebin_make_generated_file_list)
@@ -25,4 +27,4 @@ EXTRA_DIST =  $(etap_file_collection)
 CLEANFILES = $(etapebin_make_generated_file_list)
 
 %.beam: %.erl
-	$(ERLC) $(ERLC_FLAGS) $<
+	$(ERLC) $(ERLC_FLAGS) -pa . $<

@@ -360,6 +360,9 @@ AC_SUBST(JS_CFLAGS)
 LIBS="$OLD_LIBS"
 CPPFLAGS="$OLD_CPPFLAGS"
 
+MOZ_ANDROID_NDK
+MOZ_ANDROID_STLPORT
+
 AC_ARG_WITH([win32-icu-binaries],
     [AS_HELP_STRING([--with-win32-icu-binaries=PATH],
         [set PATH to the Win32 native ICU binaries directory])
