@@ -459,11 +459,11 @@ has_crypto=`\
         case application:load(crypto) of ok -> ok; _ -> exit(no_crypto) end. \
     " -noshell -s init stop`
 
-#if test -n "$has_crypto"; then
-#    AC_MSG_ERROR([Could not find the Erlang crypto library.
-#
-#Has Erlang been compiled with OpenSSL support?])
-#fi
+if test -n "$has_crypto"; then
+    AC_MSG_ERROR([Could not find the Erlang crypto library.
+
+Has Erlang been compiled with OpenSSL support?])
+fi
 
 
 
